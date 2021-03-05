@@ -1,4 +1,4 @@
-import reactRefreshRuntime from "./runtime.js";
+import reactRefreshRuntime from "/moderno/react-fast-refresh/runtime.js";
 import * as hmr from "/moderno/browser-toolkit.js";
 
 reactRefreshRuntime.injectIntoGlobalHook(window);

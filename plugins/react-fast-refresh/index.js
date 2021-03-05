@@ -12,7 +12,8 @@ import.meta.hot.accept(performReactRefresh);
 module.exports = {
     extends: require("@moderno/browser-toolkit"),
     mount: {
-        "/moderno/react-fast-refresh.js": staticResource(__dirname, "client/index.js")
+        "/moderno/react-fast-refresh.js": staticResource(__dirname, "client/index.js"),
+        "/moderno/react-fast-refresh/runtime.js": staticResource(__dirname, "client/runtime.js")
     },
     babel: {
         plugins: [
