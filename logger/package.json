@@ -1,6 +1,6 @@
 {
   "name": "@moderno/logger",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A log that doesn't hurt the eyes.",
   "main": "./index.js",
   "license": "MIT",
