@@ -1,4 +1,4 @@
-![logo](https://raw.githubusercontent.com/glromeo/moderno/main/logger/logo.png)
+![logo](https://github.com/glromeo/moderno/raw/master/logger/logo.png)
 
 A small and fast library to generate logs that don't hurt the eyes!
 

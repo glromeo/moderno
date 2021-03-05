@@ -1,4 +1,4 @@
-![logo](https://github.com/glromeo/moderno/blob/main/@moderno/web-modules/logo.svg)
+![logo](https://github.com/glromeo/moderno/raw/master/web-modules/logo.png)
 
 The purpose of this library is to create ESM micro bundles to be served during development.
 Similar to [esinstall](https://www.npmjs.com/package/esinstall) from which I took a LOT of inspiration the goal is to

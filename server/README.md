@@ -1,4 +1,5 @@
-# moderno
+![logo](https://github.com/glromeo/moderno/raw/master/server/logo.png)
+
 Your companion for a quick and fun web development 
 
 ## Features
