@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>fa-icon</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <style type="text/css">
+        body {
+            font-family: "Arial", sans-serif;
+        }
+    </style>
+</head>
+<body>
+<div id="showcase"></div>
+<script type="module">
+    import {html, render} from "lit-html";
+    import "./fa-icon.js";
+    import icons from "./variants/regular.js";
+
+    const examples = [html`
+        <div id="showcase" style="display: flex; flex-wrap: wrap; align-items: center">
+            <fa-icon name="outline">heart-</fa-icon>
+            <fa-icon name="sort-up" toggle="sort-up,sort-down"></fa-icon>
+            <fa-icon name="heart-outline" toggle="heart-outline,heart" circle></fa-icon>
+            <fa-icon name="heart" toggle="heart-outline,heart"></fa-icon>
+            <fa-icon name="copyright"></fa-icon>
+            <fa-icon name="minus" xs></fa-icon>
+            <fa-icon name="minus" sm></fa-icon>
+            <fa-icon name="minus" md></fa-icon>
+            <fa-icon name="minus" lg></fa-icon>
+            <fa-icon name="minus" xl></fa-icon>
+            <fa-icon name="plus" small></fa-icon>
+            <fa-icon name="plus" medium></fa-icon>
+            <fa-icon name="plus" large></fa-icon>
+            <fa-icon name="plus" rotate="45"></fa-icon>
+            <fa-icon name="chevron-up"></fa-icon>
+            <fa-icon name="chevron-right"></fa-icon>
+            <fa-icon name="chevron-down"></fa-icon>
+            <fa-icon name="chevron-left"></fa-icon>
+            <fa-icon name="times" toggle="times, search"></fa-icon>
+            <fa-icon name="handshake" size="1x"></fa-icon>
+            <fa-icon name="handshake" size="2x"></fa-icon>
+            <fa-icon name="handshake" size="3x"></fa-icon>
+            <fa-icon name="handshake" size="4x"></fa-icon>
+            <fa-icon name="handshake" size="5x"></fa-icon>
+        </div>
+        <hr>
+    `];
+
+    import("./files/icons.js").then(({default: icons}) => {
+
+        for (const name of icons) {
+            examples.push(html`
+            <div style="display: flex; align-items: center;">
+                <fa-icon name="${name}" style="border: 1px solid lightgray; margin: 4px;"></fa-icon>
+                <span>${name} regular</span>
+            </div>
+        `);
+        }
+
+        render(html`${examples}`, document.getElementById("showcase"));
+    });
+
+</script>
+</body>
+</html>

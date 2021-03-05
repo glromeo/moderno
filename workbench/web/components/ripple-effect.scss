@@ -1,0 +1,41 @@
+.ripple-surface {
+
+  position: relative !important;
+  overflow: hidden !important;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    background-color: adjust-color(white, $alpha: -0.75);
+  }
+
+  .ripple {
+    width: 2px;
+    height: 2px;
+    position: absolute !important;
+    border-radius: 50%;
+    animation: rippleEffect 0.5s ease-in-out;
+    pointer-events: none;
+    background-color: adjust-color(white, $alpha: -0.4) !important;
+  }
+
+  &.inverted {
+    &:hover,
+    &:focus {
+      background-color: adjust-color(black, $alpha: -0.75)
+    }
+    .ripple {
+      background-color: adjust-color(black, $alpha: -0.4) !important;
+    }
+  }
+}
+
+@keyframes rippleEffect {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(var(--scale));
+  }
+}

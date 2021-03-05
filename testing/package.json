@@ -1,0 +1,40 @@
+{
+  "name": "@moderno/testing",
+  "main": "index.ts",
+  "version": "1.0.0",
+  "description": "An umbrella module to simplify writing unit tests with mocha, chai & sinon.",
+  "author": "Gianluca Romeo <glromeo@gmail.com> (https://github.com/glromeo/moderno/testing)",
+  "license": "MIT",
+  "files": [
+    "/index.ts"
+  ],
+  "keywords": [
+    "testing",
+    "mocha",
+    "chai",
+    "sinon"
+  ],
+  "bugs": {
+    "url": "https://github.com/glromeo/moderno/testing/issues"
+  },
+  "homepage": "https://github.com/glromeo/moderno/testing#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/glromeo/moderno/testing.git"
+  },
+  "dependencies": {
+    "@types/benchmark": "^2.1.0",
+    "@types/chai": "^4.2.14",
+    "@types/mocha": "^8.2.0",
+    "@types/mock-require": "^2.0.0",
+    "@types/node": "^14.14.16",
+    "@types/sinon": "^9.0.10",
+    "@types/sinon-chai": "^3.2.5",
+    "benchmark": "^2.1.4",
+    "chai": "^4.2.0",
+    "mocha": "^8.2.1",
+    "mock-require": "^3.0.3",
+    "sinon": "^9.2.2",
+    "sinon-chai": "^3.5.0"
+  }
+}

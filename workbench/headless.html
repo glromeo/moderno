@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Headless Mode</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <script type="application/javascript">
+        window.jasmineDone = new Promise((resolve, reject)=>{
+            window.jasmineResolve = resolve;
+            window.jasmineReject = reject;
+        });
+    </script>
+</head>
+<body>
+<test-fixtures id="fixtures" slot="fixtures"></test-fixtures>
+<script type="module" src="./headless.js"></script>
+</body>
+</html>

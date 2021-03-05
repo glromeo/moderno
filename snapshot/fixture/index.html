@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fixture</title>
+    <style type="text/css">
+        html {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body>
+<custom-element>
+    <p slot="message">Hello World</p>
+</custom-element>
+</body>
+<script type="module">
+    customElements.define("custom-element", class extends HTMLElement {
+        constructor() {
+            super();
+            this.attachShadow({mode: "open"});
+        }
+        connectedCallback() {
+            this.shadowRoot.innerHTML = `
+                <div style="background: cornflowerblue; color: white; font-weight: bold; padding: 1rem; margin: 1rem;">
+                    <slot name="message"></slot>
+                </div>
+            `
+        }
+    });
+</script>
+</html>

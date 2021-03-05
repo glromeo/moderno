@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "lib": ["DOM"],
+    "module": "Moderno",
+    "noImplicitAny": false,
+    "outDir": "./lib",
+    "rootDir": "./src",
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "Moderno"
+  },
+  "include": [
+    "src"
+  ]
+}

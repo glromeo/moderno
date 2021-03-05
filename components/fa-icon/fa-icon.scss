@@ -1,0 +1,60 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  user-select: none;
+  font-size: var(--fa-icon-font-size, unset);
+}
+
+:host([type="button"]) {
+
+  svg:hover {
+    cursor: pointer;
+  }
+
+  border-radius: 1em;
+  padding: 0.33em;
+  margin: -0.33em;
+}
+
+:host([type="button"]:hover) {
+  background-color: rgba(0, 0, 0, 0.05);
+  transition: background-color .20s ease-in;
+}
+
+@mixin icon($attribute, $size) {
+  #{$attribute} {
+    svg {
+      width: $size * 1em;
+      height: $size * 1em;
+    }
+  }
+}
+
+@mixin scale($name, $size) {
+  :host(#{$name}) svg {
+    width: $size * 1em;
+    height: $size * 1em;
+  }
+}
+
+@include icon(#{":host"}, 1);
+@include icon(#{":host([xs])"}, 0.5);
+@include icon(#{":host([sm]),:host([small])"}, 0.75);
+@include icon(#{":host([md]),:host([medium])"}, 1);
+@include icon(#{":host([lg]),:host([large])"}, 1.5);
+@include icon(#{":host([xl])"}, 2);
+
+@include scale("[size='1x']", 1);
+@include scale("[size='2x']", 2);
+@include scale("[size='3x']", 3);
+@include scale("[size='4x']", 4);
+@include scale("[size='5x']", 5);
+
+.fa-primary {
+  color: var(--color-primary, gray);
+}
+
+.fa-secondary {
+  color: var(--color-secondary, lightgray);
+}

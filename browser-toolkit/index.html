@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <link rel="icon" href="icons/notifications.svg"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="theme-color" content="#000000"/>
+    <title>React App</title>
+    <script type="text/javascript">
+        window.process = {
+            env: {
+                NODE_ENV: "development"
+            }
+        };
+    </script>
+</head>
+<body>
+<img src="https://www.36exp.co.uk/wp-content/uploads/2019/08/London-Landscape-1-2-880x360.jpg">
+<noscript>You need to enable JavaScript to run this app.</noscript>
+<div id="root"></div>
+<script type="text/javascript">
+
+    const ALL_ITEMS = [
+        {type: "primary", message: "Primary"},
+        {type: "secondary", message: "Secondary"},
+        {type: "info", message: "Info"},
+        {type: "success", message: "Success"},
+        {type: "warning", message: "Warning"},
+        {type: "danger", message: "Danger"}
+    ];
+
+    window.randomItem = function () {
+        const item = Math.round(Math.random() * ALL_ITEMS.length);
+        return {id: Math.floor(Math.random() * 100), ...ALL_ITEMS[item]};
+    };
+
+</script>
+<button id="show" onclick="document.querySelector('esnext-notifications').show()">show</button>
+<button id="hide" onclick="document.querySelector('esnext-notifications').hide()">hide</button>
+<button id="auto" onclick="document.querySelector('esnext-notifications').show(true)">auto</button>
+<button id="add" onclick="document.querySelector('esnext-notifications').add(randomItem())">add</button>
+<button id="add (sticky)" onclick="document.querySelector('esnext-notifications').add(randomItem(), true)">add (sticky)</button>
+<script type="module" src="src/notifications.ts"></script>
+<!--<script type="text/javascript">-->
+<!--    setTimeout(function () {-->
+<!--        for (let i = 0; i < 1000; i++) {-->
+<!--            document.querySelector('esnext-notifications').add(randomItem());-->
+<!--        }-->
+<!--    }, 1000);-->
+<!--</script>-->
+</body>
+</html>

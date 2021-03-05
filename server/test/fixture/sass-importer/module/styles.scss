@@ -1,0 +1,5 @@
+@import "~sample";
+
+body {
+  font-size: #{add(1,1)}px;
+}

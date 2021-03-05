@@ -1,0 +1,1 @@
+{"unit tests match snapshot":["<bs-button type=\"primary 2\" light>\n  #shadow-root (open)\n  ▸ <button type=\"button\" class=\"btn btn-primary\">\n  ▸   <slot></slot>\n  ▸ </button>\n    Click ME!\n</bs-button>"]}

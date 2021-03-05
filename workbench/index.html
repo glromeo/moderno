@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Workbench</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link type="text/css" rel="stylesheet" media="screen" href="web/styles.scss">
+    <!--<link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">-->
+    <!--<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">-->
+    <style type="text/css">
+        :root {
+            --font-family-sans-serif: -apple-system, BlinkMacSystemFont, Arial, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            --font-family-monospace: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --fa-icon-font-size: 16px;
+            font-family: var(--font-family-sans-serif);
+            font-size: 12px;
+        }
+
+        #report {
+            flex: 0 0 0;
+        }
+    </style>
+    <script type="text/javascript" src="web/pace.js"></script>
+    <script type="text/javascript">
+        const darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        darkModeQuery.addEventListener("change", () => {
+            if (!localStorage.getItem("theme")) location.reload();
+        });
+        document.prefersTheme = darkModeQuery.matches ? "dark" : "light";
+        document.theme = localStorage.getItem("theme") || document.prefersTheme;
+        document.documentElement.setAttribute(document.theme, "");
+    </script>
+</head>
+<body hidden>
+<test-workbench id="workbench">
+    <test-navigator id="navigator" slot="navigator"></test-navigator>
+    <test-fixtures id="fixtures" slot="fixtures"></test-fixtures>
+    <test-report id="report" slot="report"></test-report>
+</test-workbench>
+<script type="module">
+    import {LitElement} from "lit-element";
+
+    const connectedCallback = LitElement.prototype.connectedCallback;
+    LitElement.prototype.connectedCallback = function () {
+        this.setAttribute(document.theme, "");
+        return connectedCallback.apply(this);
+    };
+</script>
+<script type="module">
+    import "@moderno/components";
+
+    import "./web/components/test-fixture.js";
+    import "./web/components/test-fixtures.js";
+    import "./web/components/test-navigator.mjs";
+    import "./web/components/test-report.js";
+    import "./web/components/test-suite.js";
+    import "./web/components/test-workbench.js";
+
+    import "./web/boot.js";
+
+    document.body.removeAttribute("hidden");
+</script>
+</body>
+</html>

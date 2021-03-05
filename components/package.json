@@ -1,0 +1,25 @@
+{
+  "name": "@moderno/components",
+  "version": "1.0.0",
+  "description": "Sleek widgets for modern wed apps.",
+  "module": "index.mjs",
+  "license": "MIT",
+  "repository": "https://github.com/glromeo/moderno.git",
+  "author": "Gianluca Romeo <glromeo@gmail.com>",
+  "dependencies": {
+    "bootstrap": "^4.5.2",
+    "jquery": "^3.5.1",
+    "lit-element": "^2.3.1",
+    "lit-html": "^1.2.1",
+    "popper.js": "^1.16.1"
+  },
+  "devDependencies": {
+    "@moderno/workbench": "^1.0.0",
+    "@moderno/lit-element-hmr": "^1.0.0",
+    "@moderno/server": "^1.0.0"
+  },
+  "scripts": {
+    "showcase": "moderno --root .. -d",
+    "test": "test-runner --root .."
+  }
+}

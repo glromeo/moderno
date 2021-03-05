@@ -1,0 +1,473 @@
+<html-diff title="side-by-side">
+  #shadow-root (open)
+  </div>
+  <div class="d3h-wrapper">
+    <div id="d3h-083269" class="d3h-file-wrapper" data-lang>
+      <div class="d3h-file-header">
+        <span class="d3h-file-name-wrapper">
+          <svg aria-hidden="true" class="d3h-icon" height="16" version="1.1" viewBox="0 0 12 16" width="12">
+            <path d="M6 5H2v-1h4v1zM2 8h7v-1H2v1z m0 2h7v-1H2v1z m0 2h7v-1H2v1z m10-7.5v9.5c0 0.55-0.45 1-1 1H1c-0.55 0-1-0.45-1-1V2c0-0.55 0.45-1 1-1h7.5l3.5 3.5z m-1 0.5L8 2H1v12h10V5z"></path>
+          </svg>
+          <span class="d3h-file-name">diff</span>
+          <span class="d3h-tag d3h-changed d3h-changed-tag">CHANGED</span>
+        </span>
+      </div>
+      <div class="d3h-files-diff">
+        <div class="d3h-file-side-diff">
+          <div class="d3h-code-wrapper">
+            <table class="d3h-diff-table">
+              <tbody class="d3h-diff-tbody">
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-info"></td>
+                  <td class="d3h-info">
+                    <div class="d3h-code-side-circle d3h-info">@@ -2,17 +2,17 @@</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      2
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            const style = {</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      3
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                added: 'background-color: rgb(204, 232, 204);color: rgb(0, 55, 0);',</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      4
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                removed: 'background-color: rgb(232, 204, 204);color: rgb(55, 0, 0);text-decoration:circle-through;',</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      5
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            };</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-del d3h-change">
+      6
+    </td>
+                  <td class="d3h-del d3h-change">
+                    <div class="d3h-code-side-circle d3h-del d3h-change">
+                      <span class="d3h-code-circle-prefix">-</span>
+                      <span class="d3h-code-circle-ctn">
+                          const
+                        <del>diff</del>
+                          = Diff.
+                        <del>diffSentences</del>
+                          (oldText, currentText);
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      7
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            const html = [];</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-del d3h-change">
+      8
+    </td>
+                  <td class="d3h-del d3h-change">
+                    <div class="d3h-code-side-circle d3h-del d3h-change">
+                      <span class="d3h-code-circle-prefix">-</span>
+                      <span class="d3h-code-circle-ctn">
+                          for (const sentence of
+                        <del>diff</del>
+                          ) {
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      9
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                if (sentence.added) {</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-del d3h-change">
+      10
+    </td>
+                  <td class="d3h-del d3h-change">
+                    <div class="d3h-code-side-circle d3h-del d3h-change">
+                      <span class="d3h-code-circle-prefix">-</span>
+                      <span class="d3h-code-circle-ctn">
+                          html.push("<
+                        <del>span</del>
+                          style='${style.added}'>${sentence.value.replace(/
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-del d3h-change">
+      11
+    </td>
+                  <td class="d3h-del d3h-change">
+                    <div class="d3h-code-side-circle d3h-del d3h-change">
+                      <span class="d3h-code-circle-prefix">-</span>
+                      <span class="d3h-code-circle-ctn">
+                          /g, '<br />')}</
+                        <del>span</del>
+                          >");
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      12
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                } else if (sentence.removed) {</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-del d3h-change">
+      13
+    </td>
+                  <td class="d3h-del d3h-change">
+                    <div class="d3h-code-side-circle d3h-del d3h-change">
+                      <span class="d3h-code-circle-prefix">-</span>
+                      <span class="d3h-code-circle-ctn">
+                          html.push("<
+                        <del>span</del>
+                          style='${style.removed}'>${sentence.value.replace(/
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-del d3h-change">
+      14
+    </td>
+                  <td class="d3h-del d3h-change">
+                    <div class="d3h-code-side-circle d3h-del d3h-change">
+                      <span class="d3h-code-circle-prefix">-</span>
+                      <span class="d3h-code-circle-ctn">
+                          /g, '<br />')}</
+                        <del>span</del>
+                          >");
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      15
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                }</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      16
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            }</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      17
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            const outHTML = html.join('<br />');</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      18
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">        </span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="d3h-file-side-diff">
+          <div class="d3h-code-wrapper">
+            <table class="d3h-diff-table">
+              <tbody class="d3h-diff-tbody">
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-info"></td>
+                  <td class="d3h-info">
+                    <div class="d3h-code-side-circle d3h-info"></div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      2
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            const style = {</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      3
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                added: 'background-color: rgb(204, 232, 204);color: rgb(0, 55, 0);',</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      4
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                removed: 'background-color: rgb(232, 204, 204);color: rgb(55, 0, 0);text-decoration:circle-through;',</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      5
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            };</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-ins d3h-change">
+      6
+    </td>
+                  <td class="d3h-ins d3h-change">
+                    <div class="d3h-code-side-circle d3h-ins d3h-change">
+                      <span class="d3h-code-circle-prefix">+</span>
+                      <span class="d3h-code-circle-ctn">
+                          const
+                        <ins>difference</ins>
+                          = Diff.
+                        <ins>diffcircles</ins>
+                          (oldText, currentText);
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      7
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            const html = [];</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-ins d3h-change">
+      8
+    </td>
+                  <td class="d3h-ins d3h-change">
+                    <div class="d3h-code-side-circle d3h-ins d3h-change">
+                      <span class="d3h-code-circle-prefix">+</span>
+                      <span class="d3h-code-circle-ctn">
+                          for (const sentence of
+                        <ins>difference</ins>
+                          ) {
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      9
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                if (sentence.added) {</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-ins d3h-change">
+      10
+    </td>
+                  <td class="d3h-ins d3h-change">
+                    <div class="d3h-code-side-circle d3h-ins d3h-change">
+                      <span class="d3h-code-circle-prefix">+</span>
+                      <span class="d3h-code-circle-ctn">
+                          html.push("<
+                        <ins>div</ins>
+                          style='${style.added}'>${sentence.value.replace(/
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-ins d3h-change">
+      11
+    </td>
+                  <td class="d3h-ins d3h-change">
+                    <div class="d3h-code-side-circle d3h-ins d3h-change">
+                      <span class="d3h-code-circle-prefix">+</span>
+                      <span class="d3h-code-circle-ctn">
+                          /g, '<br />')}</
+                        <ins>div</ins>
+                          >");
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      12
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                } else if (sentence.removed) {</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-ins d3h-change">
+      13
+    </td>
+                  <td class="d3h-ins d3h-change">
+                    <div class="d3h-code-side-circle d3h-ins d3h-change">
+                      <span class="d3h-code-circle-prefix">+</span>
+                      <span class="d3h-code-circle-ctn">
+                          html.push("<
+                        <ins>div</ins>
+                          style='${style.removed}'>${sentence.value.replace(/
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-ins d3h-change">
+      14
+    </td>
+                  <td class="d3h-ins d3h-change">
+                    <div class="d3h-code-side-circle d3h-ins d3h-change">
+                      <span class="d3h-code-circle-prefix">+</span>
+                      <span class="d3h-code-circle-ctn">
+                          /g, '<br />')}</
+                        <ins>div</ins>
+                          >");
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      15
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">                }</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      16
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            }</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      17
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">            const outHTML = html.join('<br />');</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="d3h-code-side-circlenumber d3h-cntx">
+      18
+    </td>
+                  <td class="d3h-cntx">
+                    <div class="d3h-code-side-circle d3h-cntx">
+                      <span class="d3h-code-circle-prefix"> </span>
+                      <span class="d3h-code-circle-ctn">        </span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</html-diff>

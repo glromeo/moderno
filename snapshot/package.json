@@ -1,0 +1,22 @@
+{
+  "name": "@moderno/snapshot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "serve": "node ../server/lib/cli.js --debug"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chai": "^4.2.12",
+    "@types/mocha": "^8.2.0",
+    "chai": "^4.2.0",
+    "mocha": "^8.2.1",
+    "puppeteer": "^5.5.0"
+  },
+  "dependencies": {
+    "diff": "^5.0.0",
+    "he": "^1.2.0",
+    "jasmine-core": "^3.6.0",
+    "lit-html": "^1.3.0"
+  }
+}

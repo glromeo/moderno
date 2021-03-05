@@ -1,0 +1,13 @@
+{
+  "name": "@fixture/ant-design",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@ant-design/icons": "^4.3.0",
+    "antd": "^4.10.2"
+  },
+  "devDependencies": {
+    "esinstall": "^1.0.2"
+  }
+}

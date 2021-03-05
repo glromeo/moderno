@@ -1,0 +1,59 @@
+const callbacks = new Map();
+
+const messaging = {
+
+    connected: false,
+
+    send() {
+        throw new Error("backbone not ready");
+    },
+
+    on(type, callback) {
+        callbacks.set(type, callback);
+    },
+
+    listeners: [],
+
+    set onchange(listener) {
+        this.listeners.push(listener);
+    },
+
+    notify() {
+        this.listeners.forEach(listener => listener(this));
+    },
+
+    remove(listener) {
+        const index = this.listeners.indexOf(listener);
+        if (index >= 0) {
+            this.listeners.splice(index, 1);
+        }
+    }
+};
+
+messaging.ready = window.puppeteer ? new Promise(resolve => {
+
+    messaging.send = (type, data) => {
+        const message = data === undefined ? type : JSON.stringify({type, data});
+        return window.backboneSend(message);
+    };
+
+    window.backboneReceive = message => {
+        const {type, data} = message.charAt(0) === "{" ? JSON.parse(message) : {type: message};
+        if (callbacks.has(type)) {
+            callbacks.get(type).call(this, data);
+        } else {
+            console.log(type, data || "");
+        }
+    };
+
+    setTimeout(function () {
+        messaging.send(JSON.stringify({type: "hello", data: {time: new Date().toUTCString()}}));
+        messaging.connected = true;
+        messaging.notify();
+    }, 250);
+
+    resolve();
+
+}) : require("@moderno/browser-toolkit").messaging;
+
+export default messaging;

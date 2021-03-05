@@ -1,0 +1,23 @@
+language: node_js
+node_js:
+  - "node"
+  - "14"
+
+branches:
+  only:
+    - master
+
+install:
+  - yarn install
+  - cd demo
+  - yarn install
+  - cd ..
+  - cd test/fixture
+  - yarn install
+  - cd ../..
+
+script:
+  - yarn test
+
+after_script:
+  - COVERALLS_REPO_TOKEN=$coveralls_repo_token yarn coveralls

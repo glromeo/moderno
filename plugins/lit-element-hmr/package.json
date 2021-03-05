@@ -1,0 +1,13 @@
+{
+  "name": "@moderno/lit-element-hmr",
+  "version": "1.0.0",
+  "description": "Hot Module Reload support for lit-element.",
+  "main": "index.js",
+  "license": "MIT",
+  "repository": "https://github.com/glromeo/moderno.git",
+  "author": "Gianluca Romeo <glromeo@gmail.com>",
+  "dependencies": {
+    "@moderno/browser-toolkit": "^1.0.0",
+    "lit-element": "^2.4.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@moderno/browser-toolkit",
+  "version": "1.0.0",
+  "description": "Hot Module Reload, Notifications and other features that improve development experience.",
+  "main": "index.js",
+  "license": "MIT",
+  "repository": "https://github.com/glromeo/moderno.git",
+  "author": "Gianluca Romeo <glromeo@gmail.com>",
+  "devDependencies": {
+    "esbuild": "^0.8.47"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --outdir=lib --bundle --format=esm",
+    "build:watch": "esbuild src/index.ts --outdir=lib --bundle --format=esm --watch"
+  }
+}
