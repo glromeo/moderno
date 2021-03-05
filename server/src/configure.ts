@@ -242,8 +242,12 @@ export function configure(args: Args = {}, override?): Readonly<ModernoOptions> 
         for (const name of names) try {
             plugins.push(require.resolve(name, {paths: [options.rootDir]}));
         } catch (error) {
-            log.error("plugin '" + name + "' resolution failed:", error);
-            process.exit(1);
+            try {
+                plugins.push(require.resolve(name, {paths: [__dirname]}));
+            } catch (error) {
+                log.error("plugin '" + name + "' resolution failed:", error);
+                process.exit(1);
+            }
         }
     }
 
