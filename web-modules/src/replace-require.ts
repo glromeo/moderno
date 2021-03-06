@@ -1,7 +1,7 @@
 import fs from "fs";
 import {dirname} from "path";
 import {SourceMapConsumer, SourceMapGenerator} from "source-map";
-import {ImportResolver} from "./index";
+import {ImportResolver, isBare} from "./index";
 
 const {readFile, writeFile} = fs.promises;
 
@@ -36,7 +36,7 @@ export async function replaceRequire(filename: string, resolveImport: ImportReso
     let re = /require\s*\(([^)]+)\)/g;
     for (let match = re.exec(code); match; match = re.exec(code)) {
         let required = match[1].trim().slice(1, -1);
-        requires.add(await resolveImport(required, filename));
+        requires.add(isBare(required) ? await resolveImport(required, filename) : required);
     }
 
     if (requires.size) {

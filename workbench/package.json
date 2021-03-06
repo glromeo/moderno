@@ -28,8 +28,8 @@
     "ws": "^7.4.1"
   },
   "peerDependencies": {
-    "@moderno/snapshot": "^1.0.0",
-    "@moderno/logger": "^1.0.0"
+    "@moderno/logger": "^1.0.0",
+    "@moderno/snapshot": "^1.0.0"
   },
   "devDependencies": {
     "@babel/plugin-proposal-class-properties": "^7.12.1",
@@ -37,7 +37,7 @@
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",
     "@moderno/server": "^1.0.0",
     "node-sass": "^5.0.0",
-    "puppeteer": "^5.5.0",
+    "puppeteer": "^8.0.0",
     "rollup": "^2.35.1",
     "rollup-plugin-babel": "^4.4.0",
     "rollup-plugin-commonjs": "^10.1.0",

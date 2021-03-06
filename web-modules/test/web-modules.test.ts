@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import * as fs from "fs";
 import {existsSync, readFileSync, statSync} from "fs";
+import * as mocha from "mocha";
 import * as path from "path";
 import {join, relative, resolve} from "path";
 import {SourceMapConsumer} from "source-map";
@@ -57,7 +58,7 @@ describe("web modules (esbuild)", function () {
         };
     }
 
-    it("ant-design", async function (this: Mocha.Context) {
+    it("ant-design", async function (this: mocha.Context) {
 
         this.timeout(15000);
 
@@ -127,26 +128,35 @@ describe("web modules (esbuild)", function () {
 
         await SourceMapConsumer.with(readSourceMap(`fixture/react/web_modules/react.js.map`), null, consumer => {
             expect(
-                consumer.originalPositionFor({line: 49, column: 7})
+                consumer.originalPositionFor({line: 48, column: 26})
             ).to.eql({
                 source: "../../node_modules/react/cjs/react.development.js",
-                line: 16,
-                column: 0,
+                line: 19,
+                column: 19,
                 name: null
             });
             expect(
                 consumer.generatedPositionFor({
                     source: "../../node_modules/react/cjs/react.development.js",
-                    line: 35,
-                    column: 5
+                    line: 16,
+                    column: 27
                 })
             ).to.eql({
-                line: 60, column: 10, lastColumn: 36
+                line: 47, column: 20, lastColumn: null
+            });
+            expect(
+                consumer.generatedPositionFor({
+                    source: "../../node_modules/react/cjs/react.development.js",
+                    line: 78,
+                    column: 48
+                })
+            ).to.eql({
+                line: 98, column: 53, lastColumn: 66
             });
         });
     });
 
-    it("can bundle react-dom (production)", async function (this: Mocha.Context) {
+    it("can bundle react-dom (production)", async function (this: mocha.Context) {
 
         this.timeout(10000);
 
@@ -294,7 +304,7 @@ describe("web modules (esbuild)", function () {
 
     });
 
-    it("can bundle antd (shallow)", async function (this: Mocha.Context) {
+    it("can bundle antd (shallow)", async function (this: mocha.Context) {
 
         this.timeout(15000);
 
@@ -318,7 +328,7 @@ describe("web modules (esbuild)", function () {
 
     });
 
-    it("can bundle rc-resize-observer (dependency of antd)", async function (this: Mocha.Context) {
+    it("can bundle rc-resize-observer (dependency of antd)", async function (this: mocha.Context) {
 
         let {bundleWebModule, resolveImport} = useFixture("/ant-design");
 
@@ -641,9 +651,11 @@ describe("web modules (esbuild)", function () {
         await bundleWebModule("@babel/runtime/helpers/esm/decorate.js");
         await bundleWebModule("@babel/runtime/helpers/esm/extends.js");
 
-        expect(
-            readTextFile(`fixture/babel-runtime/web_modules/@babel/runtime/helpers/esm/decorate.js`)
-        ).to.have.string(
+        let decorateContent = readTextFile(`fixture/babel-runtime/web_modules/@babel/runtime/helpers/esm/decorate.js`);
+
+        expect(decorateContent).not.to.have.string("var require_arrayWithHoles = __commonJS((exports, module) => {");
+
+        expect(decorateContent).to.have.string(
             "function _arrayWithHoles(arr) {\n" +
             "  if (Array.isArray(arr))\n" +
             "    return arr;\n" +
@@ -662,7 +674,7 @@ describe("web modules (esbuild)", function () {
     });
 
 
-    it("can bundle redux & co.", async function (this: Mocha.Context) {
+    it("can bundle redux & co.", async function (this: mocha.Context) {
 
         this.timeout(10000);
 
@@ -715,7 +727,7 @@ describe("web modules (esbuild)", function () {
         ]);
     });
 
-    it("react & react-dom share object-assign", async function (this: Mocha.Context) {
+    it("react & react-dom share object-assign", async function (this: mocha.Context) {
 
         this.timeout(10000);
 
@@ -739,7 +751,7 @@ describe("web modules (esbuild)", function () {
         expect(await resolveImport("object-assign/index.js")).to.equal("/web_modules/object-assign.js");
     });
 
-    it("can bundle @ant-design/icons", async function (this: Mocha.Context) {
+    it("can bundle @ant-design/icons", async function (this: mocha.Context) {
 
         this.timeout(60000);
 

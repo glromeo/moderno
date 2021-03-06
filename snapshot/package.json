@@ -11,7 +11,7 @@
     "@types/mocha": "^8.2.0",
     "chai": "^4.2.0",
     "mocha": "^8.2.1",
-    "puppeteer": "^5.5.0"
+    "puppeteer": "^8.0.0"
   },
   "dependencies": {
     "diff": "^5.0.0",

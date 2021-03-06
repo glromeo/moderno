@@ -91,15 +91,16 @@ describe("resolve import", function () {
     it("relative imports", async function () {
 
         let {rootDir, resolveImport} = setup("fixture/workspaces");
+        let importer = path.join(rootDir, "importer.js");
 
-        expect(await resolveImport("./epsilon.alpha", "/importer.js")).to.equal("./epsilon.alpha?type=module");
+        expect(await resolveImport("./alpha.beta", importer)).to.equal("./alpha.beta.ts");
 
-        // should resolve fixture/alpha/beta/delta.sigma adding query for type=module
-        expect(await resolveImport("./delta.sigma", "/importer.js")).to.equal(
+        // should resolve fixture/alpha/beta/delta.sigma adding type=module
+        expect(await resolveImport("./delta.sigma", importer)).to.equal(
             "./delta.sigma?type=module"
         );
         // ...leaving any existing query alone
-        expect(await resolveImport("./delta.sigma?q=e", "/importer.js")).to.equal("./delta.sigma?type=module&q=e");
+        expect(await resolveImport("./delta.sigma?q=e", importer)).to.equal("./delta.sigma?type=module&q=e");
 
     });
 
@@ -158,11 +159,11 @@ describe("resolve import", function () {
     });
 
     it("relative imports of asset files", async function () {
-        let {resolveImport} = setup("fixture");
-        expect(await resolveImport("./styles")).to.equal("./styles"); // This falls under ext-less case
-        expect(await resolveImport("./styles", "/importer.js")).to.equal("./styles?type=module");
-        expect(await resolveImport("./styles.css", "/importer.js")).to.equal("./styles.css?type=module");
-        expect(await resolveImport("../styles.scss", "/importer.js")).to.equal("../styles.scss?type=module");
+        let {rootDir, resolveImport} = setup("fixture/workspaces");
+        let importer = path.join(rootDir, "group/module-b/importer.js");
+        expect(await resolveImport("./styles").catch(e=>e.message)).to.have.string("Cannot find module './styles'");
+        expect(await resolveImport("../../styles.css", importer)).to.equal("../../styles.css?type=module");
+        expect(await resolveImport("module-a/styles.scss", importer)).to.equal("/node_modules/module-a/styles.scss?type=module");
     });
 
     it("tippy.js", async function () {
