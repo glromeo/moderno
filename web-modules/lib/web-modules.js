@@ -103,15 +103,20 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
             let [module, filename] = es_import_utils_1.parseModuleUrl(pathname);
             if (module && !importMap.imports[module]) {
                 await bundleWebModule(module);
-                resolved = importMap.imports[module];
+                resolved = importMap.imports[pathname];
             }
-            if (filename) {
-                let ext = path_1.posix.extname(filename);
-                if (!ext) {
-                    const basedir = importer ? path_1.default.dirname(importer) : options.rootDir;
-                    filename = resolveFilename(module, filename, basedir);
-                    ext = path_1.default.extname(filename);
+            if (!resolved) {
+                if (module) {
+                    pathname = resolve_1.default.sync(pathname, resolveOptions);
+                    filename = es_import_utils_1.pathnameToModuleUrl(pathname).slice(module.length + 1);
                 }
+                else {
+                    const basedir = importer ? path_1.default.dirname(importer) : options.rootDir;
+                    pathname = resolve_1.default.sync(pathname, { ...resolveOptions, basedir });
+                    let relative = path_1.default.relative(basedir, pathname);
+                    filename = es_import_utils_1.isBare(relative) ? `./${relative}` : relative;
+                }
+                let ext = path_1.posix.extname(filename);
                 const type = importer ? resolveModuleType(ext, importer) : null;
                 if (type) {
                     search = search ? `?type=${type}&${search.slice(1)}` : `?type=${type}`;
@@ -144,37 +149,6 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
             return resolved;
         }
     };
-    function resolveFilename(module, filename, basedir) {
-        let pathname, resolved;
-        if (module) {
-            pathname = resolve_1.default.sync(`${module}/${filename}`, resolveOptions);
-            resolved = es_import_utils_1.parseModuleUrl(es_import_utils_1.pathnameToModuleUrl(pathname))[1];
-        }
-        else {
-            pathname = path_1.default.join(basedir, filename);
-            resolved = filename;
-        }
-        try {
-            let stats = fs_1.statSync(pathname);
-            if (stats.isDirectory()) {
-                pathname = path_1.default.join(pathname, "index");
-                for (const ext of options.resolve.extensions) {
-                    if (fs_1.existsSync(pathname + ext)) {
-                        return `${resolved}/index${ext}`;
-                    }
-                }
-            }
-            return resolved;
-        }
-        catch (ignored) {
-            for (const ext of options.resolve.extensions) {
-                if (fs_1.existsSync(pathname + ext)) {
-                    return `${resolved}${ext}`;
-                }
-            }
-            return resolved;
-        }
-    }
     function resolveModuleType(ext, importer) {
         if (!isModule.test(ext) && isModule.test(importer)) {
             return "module";

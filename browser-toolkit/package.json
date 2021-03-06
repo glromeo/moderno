@@ -7,7 +7,7 @@
   "repository": "https://github.com/glromeo/moderno.git",
   "author": "Gianluca Romeo <glromeo@gmail.com>",
   "devDependencies": {
-    "esbuild": "^0.8.47"
+    "esbuild": "^0.8.56"
   },
   "scripts": {
     "build": "esbuild src/index.ts --outdir=lib --bundle --format=esm",

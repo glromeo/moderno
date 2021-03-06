@@ -118,15 +118,19 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
             let [module, filename] = parseModuleUrl(pathname);
             if (module && !importMap.imports[module]) {
                 await bundleWebModule(module);
-                resolved = importMap.imports[module];
+                resolved = importMap.imports[pathname];
             }
-            if (filename) {
-                let ext = posix.extname(filename);
-                if (!ext) {
+            if (!resolved) {
+                if (module) {
+                    pathname = resolve.sync(pathname, resolveOptions);
+                    filename = pathnameToModuleUrl(pathname).slice(module.length + 1);
+                } else {
                     const basedir = importer ? path.dirname(importer) : options.rootDir;
-                    filename = resolveFilename(module, filename, basedir);
-                    ext = path.extname(filename);
+                    pathname = resolve.sync(pathname, {...resolveOptions, basedir});
+                    let relative = path.relative(basedir, pathname);
+                    filename = isBare(relative) ? `./${relative}` : relative;
                 }
+                let ext = posix.extname(filename);
                 const type = importer ? resolveModuleType(ext, importer) : null;
                 if (type) {
                     search = search ? `?type=${type}&${search.slice(1)}` : `?type=${type}`;
@@ -156,36 +160,6 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
             return resolved;
         }
     };
-
-    function resolveFilename(module: string | null, filename: string, basedir: string): string {
-        let pathname, resolved;
-        if (module) {
-            pathname = resolve.sync(`${module}/${filename}`, resolveOptions);
-            resolved = parseModuleUrl(pathnameToModuleUrl(pathname))[1]!;
-        } else {
-            pathname = path.join(basedir, filename);
-            resolved = filename;
-        }
-        try {
-            let stats = statSync(pathname);
-            if (stats.isDirectory()) {
-                pathname = path.join(pathname, "index");
-                for (const ext of options.resolve.extensions!) {
-                    if (existsSync(pathname + ext)) {
-                        return `${resolved}/index${ext}`;
-                    }
-                }
-            }
-            return resolved;
-        } catch (ignored) {
-            for (const ext of options.resolve.extensions!) {
-                if (existsSync(pathname + ext)) {
-                    return `${resolved}${ext}`;
-                }
-            }
-            return resolved;
-        }
-    }
 
     function resolveModuleType(ext: string, importer: string): string | null {
         if (!isModule.test(ext) && isModule.test(importer)) {

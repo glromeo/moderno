@@ -15,9 +15,9 @@ describe("workspaces", function () {
     })
 
     it("can resolve workspaces modules", async function () {
-        expect(await resolveImport("module-a")).to.equal("/workspaces/module-a/index.js");
-
-        expect(await resolveImport("module-b")).to.equal("/workspaces/group/module-b/index.js");
+        // expect(await resolveImport("module-a")).to.equal("/workspaces/module-a/index.js");
+        //
+        // expect(await resolveImport("module-b")).to.equal("/workspaces/group/module-b/index.js");
 
         expect(await resolveImport("module-c").catch(err => err.message))
             .to.match(/Cannot find module 'module-c'/);
