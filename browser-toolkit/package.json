@@ -1,6 +1,6 @@
 {
   "name": "@moderno/browser-toolkit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hot Module Reload, Notifications and other features that improve development experience.",
   "main": "index.js",
   "license": "MIT",

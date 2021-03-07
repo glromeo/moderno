@@ -1,6 +1,6 @@
 {
   "name": "@moderno/react-fast-refresh",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hot Module Reload support for React.",
   "main": "index.js",
   "license": "MIT",
@@ -10,7 +10,7 @@
     "@babel/core": "^7.13.8",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
     "@babel/types": "^7.12.17",
-    "@moderno/browser-toolkit": "^1.0.0",
+    "@moderno/browser-toolkit": "^1.0.1",
     "react-refresh": "^0.9.0"
   },
   "scripts": {
