@@ -39,7 +39,9 @@ export declare type ModernoOptions = WebModulesOptions & {
         [path: string]: string;
     };
     babel: TransformOptions;
-    sass: SyncOptions;
+    sass: SyncOptions & {
+        HMR: boolean;
+    };
     messaging?: MessagingOptions;
     plugins: (ModernoOptions | string)[];
 };

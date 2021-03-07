@@ -6,13 +6,13 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "lib": ["DOM"],
-    "module": "Moderno",
+    "module": "ESNext",
     "noImplicitAny": false,
     "outDir": "./lib",
     "rootDir": "./src",
     "skipLibCheck": true,
     "strict": true,
-    "target": "Moderno"
+    "target": "ESNext"
   },
   "include": [
     "src"

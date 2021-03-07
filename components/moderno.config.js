@@ -14,7 +14,7 @@ module.exports = {
         sourcemap: false
     },
     plugins: [
-        require("@moderno/workbench/moderno.plugin"),
+        require("@moderno/workbench/plugin"),
         require("@moderno/lit-element-hmr")
     ]
 };

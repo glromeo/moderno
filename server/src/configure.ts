@@ -44,7 +44,7 @@ export type ModernoOptions = WebModulesOptions & {
     }
     mount: { [path: string]: string }
     babel: TransformOptions
-    sass: SyncOptions
+    sass: SyncOptions & { HMR: boolean }
     messaging?: MessagingOptions
     plugins: (ModernoOptions|string)[]
 }
@@ -195,7 +195,8 @@ export function defaultOptions(args: Args): ModernoOptions {
         },
         sass: {
             extensions: [".scss", ".css", ".sass"],
-            outputStyle: "expanded"
+            outputStyle: "expanded",
+            HMR: true
         }
     }, require("@moderno/web-modules/web-modules.config.js"));
 }

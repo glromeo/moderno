@@ -62,7 +62,7 @@ export const useMessaging = memoized((options: ModernoOptions) => {
         });
 
         ws.on("message", function (message: string) {
-            const {type, data}: Message = message.charAt(0) === "{" ? JSON.parse(message) : {type: message};
+            const {type, data}: Message = message[0] === "{" ? JSON.parse(message) : {type: message};
             if (callbacks.has(type)) for (const callback of callbacks.get(type)!) {
                 callback(data, send);
             }

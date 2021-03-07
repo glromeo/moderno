@@ -1,20 +1,20 @@
 import path from "path";
 
 export function isBare(url: string): boolean {
-    let cc = url.charAt(0);
+    let cc = url[0];
     if (cc === "/") return false;
     if (cc === ".") {
         if (url.length === 1) return false;
-        cc = url.charAt(1);
+        cc = url[1];
         if (cc === "/") return false;
         if (cc === ".") {
             if (url.length === 2) return false;
-            cc = url.charAt(2);
+            cc = url[2];
             if (cc === "/") return false;
         }
     }
-    if (url.charAt(1) === ":") {
-        let s = url.charAt(2);
+    if (url[1] === ":") {
+        let s = url[2];
         if (s === "/" || s === "\\") return false;
     }
     return true;
@@ -36,7 +36,7 @@ export const pathnameToModuleUrl = path.sep === POSIX_SEP
 
 
 export function parseModuleUrl(pathname: string): [string | null, string | null] {
-    let namespace = pathname.charAt(0) === "@";
+    let namespace = pathname[0] === "@";
     let separator = namespace ? pathname.indexOf("/", pathname.indexOf("/", 1) + 1) : pathname.indexOf("/", 0);
     if (separator === -1) return [
         pathname,

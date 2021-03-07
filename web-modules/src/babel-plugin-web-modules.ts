@@ -30,7 +30,7 @@ export const useWebModulesPlugin = memoized(config => {
 
             if (!isBare(resolvedUrl)) {
                 imports.add(resolvedUrl);
-                log.debug(filename, "collected link:", resolvedUrl);
+                log.trace(filename, "collected link:", resolvedUrl);
             }
         }
 

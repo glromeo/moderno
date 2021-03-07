@@ -20,10 +20,6 @@ module.exports = {
         terser: false
     },
 
-    middleware: [
-        require("./lib/endpoint/snapshots-middleware.js")
-    ],
-
     specs: [
         "components/**/*.spec.js",
         "test/*.spec.mjs"

@@ -1,7 +1,9 @@
+const path = require("path");
+
 module.exports = {
 
     mount: {
-        "/workbench": __dirname
+        "/workbench": path.resolve(__dirname, "..")
     },
 
     transform: {
@@ -27,8 +29,8 @@ module.exports = {
     },
 
     middleware: [
-        require("./lib/endpoint/config-middleware.js"),
-        require("./lib/endpoint/snapshots-middleware.js")
+        require("./config-middleware.js"),
+        require("./snapshots-middleware.js")
     ],
 
     web_modules: {
@@ -39,8 +41,8 @@ module.exports = {
 
     messaging: {
         plugins: [
-            require("./lib/endpoint/find-plugin.js"),
-            require("./lib/endpoint/coverage-plugin.js")
+            require("./find-plugin.js"),
+            require("./coverage-plugin.js")
         ]
     }
 };

@@ -30,7 +30,7 @@ exports.useWebModulesPlugin = nano_memoize_1.default(config => {
                 }
             if (!es_import_utils_1.isBare(resolvedUrl)) {
                 imports.add(resolvedUrl);
-                logger_1.default.debug(filename, "collected link:", resolvedUrl);
+                logger_1.default.trace(filename, "collected link:", resolvedUrl);
             }
         }
         return {

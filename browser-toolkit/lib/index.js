@@ -37,7 +37,7 @@ ws.onopen = (event) => {
 };
 ws.onmessage = (event) => {
   const message = event.data;
-  const {type, data = void 0} = message.charAt(0) === "{" ? JSON.parse(message) : {type: message};
+  const {type, data = void 0} = message[0] === "{" ? JSON.parse(message) : {type: message};
   const subset = callbacks.get(type);
   if (subset)
     for (const callback of subset) {

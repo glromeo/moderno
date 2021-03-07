@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A simple and modern web interface for testing your components with Jasmine",
   "author": "Gianluca Romeo <glromeo@gmail.com> (https://github.com/glromeo/moderno)",
-  "main": "moderno.plugin.js",
+  "main": "index.js",
   "bin": {
     "test-runner": "./lib/test-runner.js"
   },

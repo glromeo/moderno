@@ -23,6 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.useWebModules = exports.defaultOptions = void 0;
+const logger_1 = __importDefault(require("@moderno/logger"));
 const chalk_1 = __importDefault(require("chalk"));
 const esbuild_1 = require("esbuild");
 const esbuild_sass_plugin_1 = require("esbuild-sass-plugin");
@@ -31,7 +32,6 @@ const fs_1 = require("fs");
 const nano_memoize_1 = __importDefault(require("nano-memoize"));
 const path_1 = __importStar(require("path"));
 const resolve_1 = __importDefault(require("resolve"));
-const logger_1 = __importDefault(require("@moderno/logger"));
 const cjs_entry_proxy_1 = require("./cjs-entry-proxy");
 const entry_modules_1 = require("./entry-modules");
 const es_import_utils_1 = require("./es-import-utils");
@@ -94,6 +94,9 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
     const ignore = function () {
     };
     const resolveImport = async (url, importer) => {
+        if (url[0] === "/" && /^\/(web_modules|moderno)\//.test(url)) {
+            return url;
+        }
         let { hostname, pathname, search } = fast_url_parser_1.parse(url);
         if (hostname !== null) {
             return url;
@@ -113,7 +116,7 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
                 else {
                     const basedir = importer ? path_1.default.dirname(importer) : options.rootDir;
                     pathname = resolve_1.default.sync(pathname, { ...resolveOptions, basedir });
-                    let relative = path_1.default.relative(basedir, pathname);
+                    let relative = path_1.default.relative(basedir, pathname).replace(/\\/g, "/");
                     filename = es_import_utils_1.isBare(relative) ? `./${relative}` : relative;
                 }
                 let ext = path_1.posix.extname(filename);

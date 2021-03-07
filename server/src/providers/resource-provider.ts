@@ -184,7 +184,7 @@ export const useResourceProvider = memoized(function (options: ModernoOptions) {
         async provideResource(url: string): Promise<Resource> {
             let resource = cache.get(url);
             if (resource) {
-                log.debug("retrieved from cache:", chalk.magenta(url));
+                log.trace("retrieved from cache:", chalk.magenta(url));
             } else {
                 resource = route(url).then(pipeline).then(resource => {
                     if (options.cache && resource.filename) {
@@ -194,11 +194,13 @@ export const useResourceProvider = memoized(function (options: ModernoOptions) {
                             for (const filename of resource.watch) watch(filename, url);
                         }
                     }
-                    return resource;
-                }).finally(function () {
                     if (!options.cache) {
                         cache.delete(url);
                     }
+                    return resource;
+                }).catch(function (error) {
+                    cache.delete(url);
+                    throw error;
                 });
 
                 cache.set(url, resource);

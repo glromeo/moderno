@@ -6,25 +6,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.toPosix = exports.parseModuleUrl = exports.pathnameToModuleUrl = exports.posixPathnameToModuleUrl = exports.isBare = void 0;
 const path_1 = __importDefault(require("path"));
 function isBare(url) {
-    let cc = url.charAt(0);
+    let cc = url[0];
     if (cc === "/")
         return false;
     if (cc === ".") {
         if (url.length === 1)
             return false;
-        cc = url.charAt(1);
+        cc = url[1];
         if (cc === "/")
             return false;
         if (cc === ".") {
             if (url.length === 2)
                 return false;
-            cc = url.charAt(2);
+            cc = url[2];
             if (cc === "/")
                 return false;
         }
     }
-    if (url.charAt(1) === ":") {
-        let s = url.charAt(2);
+    if (url[1] === ":") {
+        let s = url[2];
         if (s === "/" || s === "\\")
             return false;
     }
@@ -44,7 +44,7 @@ exports.pathnameToModuleUrl = path_1.default.sep === POSIX_SEP
         return posixPathnameToModuleUrl(filename.replace(BACKSLASH_REGEXP, POSIX_SEP));
     };
 function parseModuleUrl(pathname) {
-    let namespace = pathname.charAt(0) === "@";
+    let namespace = pathname[0] === "@";
     let separator = namespace ? pathname.indexOf("/", pathname.indexOf("/", 1) + 1) : pathname.indexOf("/", 0);
     if (separator === -1)
         return [

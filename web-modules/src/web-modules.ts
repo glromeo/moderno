@@ -1,12 +1,12 @@
+import log from "@moderno/logger";
 import chalk from "chalk";
 import {Service, startService} from "esbuild";
 import {sassPlugin} from "esbuild-sass-plugin";
 import {parse} from "fast-url-parser";
-import {existsSync, mkdirSync, rmdirSync, statSync} from "fs";
+import {existsSync, mkdirSync, rmdirSync} from "fs";
 import memoized from "nano-memoize";
 import path, {posix} from "path";
 import resolve, {Opts} from "resolve";
-import log from "@moderno/logger";
 import {generateCjsProxy, parseCjsReady} from "./cjs-entry-proxy";
 import {collectEntryModules} from "./entry-modules";
 import {isBare, parseModuleUrl, pathnameToModuleUrl} from "./es-import-utils";
@@ -103,6 +103,11 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
      * @param importer
      */
     const resolveImport: ImportResolver = async (url, importer?) => {
+
+        if (url[0] === "/" && /^\/(web_modules|moderno)\//.test(url)) {
+            return url;
+        }
+
         let {
             hostname,
             pathname,
@@ -127,7 +132,7 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
                 } else {
                     const basedir = importer ? path.dirname(importer) : options.rootDir;
                     pathname = resolve.sync(pathname, {...resolveOptions, basedir});
-                    let relative = path.relative(basedir, pathname);
+                    let relative = path.relative(basedir, pathname).replace(/\\/g,"/");
                     filename = isBare(relative) ? `./${relative}` : relative;
                 }
                 let ext = posix.extname(filename);

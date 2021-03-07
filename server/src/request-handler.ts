@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import corsMiddleware from "cors";
 import {parse as parseURL} from "fast-url-parser";
 import Router, {Req, Res} from "find-my-way";
@@ -141,7 +142,7 @@ export const useRequestHandler = memoized(<V extends Version>(options: ModernoOp
     };
 
     return function requestHandler(req: Req<V>, res: Res<V>): void {
-        log.debug(req.method!, req.url);
+        log.debug(req.method!, chalk.magenta(req.url));
         cors(req, res, next(req, res));
     };
 });
