@@ -53,7 +53,11 @@ export const useRequestHandler = memoized(<V extends Version>(options: ModernoOp
         });
     }
 
-    const crossorigin = options.cors.credentials ? "crossorigin=use-credentials" : "crossorigin=anonymous";
+    const crossorigin = options.cors.credentials === true
+        ? "crossorigin=use-credentials;"
+        : options.cors.credentials === false
+            ? "crossorigin=anonymous;"
+            : "crossorigin;";
 
     /**
      *  __        __         _                               ____
@@ -88,7 +92,7 @@ export const useRequestHandler = memoized(<V extends Version>(options: ModernoOp
                     provideResource(link).catch(function () {
                         log.warn("failed to pre-warm cache with:", link);
                     });
-                    return `<${link}>; ${crossorigin}; rel=preload; as=${link.endsWith(".css") ? "style" : "script"}`;
+                    return `<${link}>; rel=preload; ${crossorigin} as=${link.endsWith(".css") ? "style" : "script"}`;
                 });
             }
 
