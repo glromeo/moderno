@@ -119,7 +119,6 @@ describe("web modules (esbuild)", function () {
 
         let {imports} = readImportMap(`fixture/react/web_modules/import-map.json`);
         expect(imports).to.have.keys([
-            "@fixture/react",
             "react",
             "react/index.js",
             "object-assign",
@@ -186,7 +185,6 @@ describe("web modules (esbuild)", function () {
 
         let {imports} = readImportMap(`fixture/react/web_modules/import-map.json`);
         expect(imports).to.have.keys([
-            "@fixture/react",
             "react-dom",
             "react-dom/index.js",
             "object-assign",
@@ -234,7 +232,6 @@ describe("web modules (esbuild)", function () {
 
         let {imports} = readImportMap(`fixture/react/web_modules/import-map.json`);
         expect(imports).to.have.keys([
-            "@fixture/react",
             "object-assign",
             "object-assign/index.js",
             "prop-types",
@@ -634,13 +631,13 @@ describe("web modules (esbuild)", function () {
             "bootstrap/dist/css/bootstrap.css"
         ]);
 
-        expect(imports["bootstrap/dist/css/bootstrap.css"]).to.equal("/web_modules/bootstrap/dist/css/bootstrap.js");
+        expect(imports["bootstrap/dist/css/bootstrap.css"]).to.equal("/web_modules/bootstrap/dist/css/bootstrap.css");
 
-        expect(
-            readTextFile(`fixture/bootstrap/web_modules/bootstrap/dist/css/bootstrap.js`)
-        ).to.have.string(
-            `// sass:bootstrap/dist/css/bootstrap.css\ndocument.head.appendChild(document.createElement("style"))`
-        );
+        // expect(
+        //     readTextFile(`fixture/bootstrap/web_modules/bootstrap/dist/css/bootstrap.js`)
+        // ).to.have.string(
+        //     `// sass:bootstrap/dist/css/bootstrap.css\ndocument.head.appendChild(document.createElement("style"))`
+        // );
     });
 
 
@@ -666,8 +663,7 @@ describe("web modules (esbuild)", function () {
         expect(imports).to.have.keys([
             "@babel/runtime",
             "@babel/runtime/helpers/esm/decorate.js",
-            "@babel/runtime/helpers/esm/extends.js",
-            "@fixture/babel-runtime"
+            "@babel/runtime/helpers/esm/extends.js"
         ]);
 
         expect(existsSync(`fixture/babel-runtime/web_modules/@babel/runtime.js`)).to.be.false;

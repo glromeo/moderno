@@ -26,7 +26,6 @@ exports.useWebModules = exports.defaultOptions = void 0;
 const logger_1 = __importDefault(require("@moderno/logger"));
 const chalk_1 = __importDefault(require("chalk"));
 const esbuild_1 = require("esbuild");
-const esbuild_sass_plugin_1 = require("esbuild-sass-plugin");
 const fast_url_parser_1 = require("fast-url-parser");
 const fs_1 = require("fs");
 const nano_memoize_1 = __importDefault(require("nano-memoize"));
@@ -82,68 +81,48 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
         logger_1.default.warn("cleaned web_modules directory");
     }
     fs_1.mkdirSync(outDir, { recursive: true });
-    const importMap = {
-        imports: {
-            ...utility_1.readImportMap(options.rootDir, outDir).imports,
-            ...workspaces_1.readWorkspaces(options.rootDir).imports
-        }
-    };
+    const importMap = utility_1.readImportMap(options.rootDir, outDir);
+    const workspaces = workspaces_1.readWorkspaces(options.rootDir);
     const squash = new Set(options.squash);
     const entryModules = entry_modules_1.collectEntryModules(resolveOptions, squash);
     const isModule = /\.m?[tj]sx?$/;
     const ignore = function () {
     };
+    const isResolved = ((re) => re.test.bind(re))(/^\/(web_modules|workspaces|moderno)\//);
     const resolveImport = async (url, importer) => {
-        if (url[0] === "/" && /^\/(web_modules|moderno)\//.test(url)) {
+        if (url[0] === "/" && isResolved(url))
             return url;
-        }
         let { hostname, pathname, search } = fast_url_parser_1.parse(url);
         if (hostname !== null) {
             return url;
         }
         let resolved = importMap.imports[pathname];
         if (!resolved) {
-            let [module, filename] = es_import_utils_1.parseModuleUrl(pathname);
-            if (module && !importMap.imports[module]) {
-                await bundleWebModule(module);
-                resolved = importMap.imports[pathname];
-            }
-            if (!resolved) {
-                if (module) {
-                    pathname = resolve_1.default.sync(pathname, resolveOptions);
-                    filename = es_import_utils_1.pathnameToModuleUrl(pathname).slice(module.length + 1);
+            const [module] = es_import_utils_1.parseModuleUrl(pathname);
+            if (module) {
+                const filename = resolve_1.default.sync(pathname, resolveOptions);
+                pathname = es_import_utils_1.pathnameToModuleUrl(filename);
+                if (workspaces.has(module)) {
+                    resolved = path_1.posix.join(workspaces.get(module), pathname.slice(module.length + 1));
                 }
                 else {
-                    const basedir = importer ? path_1.default.dirname(importer) : options.rootDir;
-                    pathname = resolve_1.default.sync(pathname, { ...resolveOptions, basedir });
-                    let relative = path_1.default.relative(basedir, pathname).replace(/\\/g, "/");
-                    filename = es_import_utils_1.isBare(relative) ? `./${relative}` : relative;
-                }
-                let ext = path_1.posix.extname(filename);
-                const type = importer ? resolveModuleType(ext, importer) : null;
-                if (type) {
-                    search = search ? `?type=${type}&${search.slice(1)}` : `?type=${type}`;
-                }
-                if (module) {
-                    if (ext === ".js" || ext === ".mjs") {
-                        let bundled = importMap.imports[path_1.posix.join(module, filename)];
-                        if (bundled) {
-                            resolved = bundled;
-                        }
-                        else {
-                            let target = `${module}/${filename}`;
-                            await bundleWebModule(target);
-                            resolved = `/web_modules/${target}`;
-                        }
+                    resolved = importMap.imports[pathname];
+                    if (!resolved) {
+                        await bundleWebModule(pathname);
+                        resolved = importMap.imports[pathname];
                     }
-                    else {
-                        resolved = `/node_modules/${module}/${filename}`;
-                    }
-                }
-                else {
-                    resolved = filename;
                 }
             }
+            else {
+                const basedir = importer ? path_1.default.dirname(importer) : options.rootDir;
+                const filename = resolve_1.default.sync(pathname, { ...resolveOptions, basedir });
+                pathname = es_import_utils_1.toPosix(path_1.default.relative(basedir, filename));
+                resolved = es_import_utils_1.isBare(pathname) ? `./${pathname}` : pathname;
+            }
+        }
+        const type = importer ? resolveModuleType(resolved, importer) : null;
+        if (type) {
+            search = search ? `?type=${type}&${search.slice(1)}` : `?type=${type}`;
         }
         if (search) {
             return resolved + search;
@@ -152,7 +131,8 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
             return resolved;
         }
     };
-    function resolveModuleType(ext, importer) {
+    function resolveModuleType(filename, importer) {
+        const ext = path_1.posix.extname(filename);
         if (!isModule.test(ext) && isModule.test(importer)) {
             return "module";
         }
@@ -172,11 +152,6 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
         return pendingTask;
     }
     let esbuild;
-    let stylePlugin = esbuild_sass_plugin_1.sassPlugin({
-        basedir: options.rootDir,
-        cache: false,
-        type: "style"
-    });
     let ready = Promise.all([
         esbuild_1.startService(),
         cjs_entry_proxy_1.parseCjsReady,
@@ -202,6 +177,19 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
                 notify(`nothing to bundle for: ${source}`, "success", true);
                 return;
             }
+            if (!(entryFile.endsWith(".js") || entryFile.endsWith(".mjs"))) {
+                importMap.imports[source] = `/web_modules/${source}`;
+                const outFile = path_1.default.resolve(outDir, source);
+                fs_1.mkdirSync(path_1.default.dirname(outFile), { recursive: true });
+                await Promise.all([
+                    fs_1.promises.copyFile(entryFile, outFile),
+                    utility_1.writeImportMap(outDir, importMap)
+                ]);
+                const elapsed = Date.now() - startTime;
+                logger_1.default.info `copied: ${chalk_1.default.magenta(source)} in: ${chalk_1.default.magenta(String(elapsed))}ms`;
+                bundleNotification.update(`copied: ${source} in: ${elapsed}ms`, "success");
+                return;
+            }
             let entryUrl = es_import_utils_1.pathnameToModuleUrl(entryFile);
             let pkg = utility_1.closestManifest(entryFile);
             let isESM = pkg.module || pkg["jsnext:main"]
@@ -211,6 +199,12 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
             const [entryModule, pathname] = es_import_utils_1.parseModuleUrl(source);
             if (entryModule && !importMap.imports[entryModule] && entryModule !== source) {
                 await bundleWebModule(entryModule);
+                if (importMap.imports[entryUrl]) {
+                    const elapsed = Date.now() - startTime;
+                    logger_1.default.info `already bundled: ${chalk_1.default.magenta(source)}`;
+                    bundleNotification.update(`already bundled: ${source}`, "success");
+                    return;
+                }
             }
             let outName = `${utility_1.stripExt(source)}.js`;
             let outUrl = `/web_modules/${outName}`;
@@ -220,7 +214,7 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
                     ...options.esbuild,
                     entryPoints: [entryUrl],
                     outfile: outFile,
-                    plugins: [stylePlugin, {
+                    plugins: [{
                             name: "web_modules",
                             setup(build) {
                                 build.onResolve({ filter: /./ }, async ({ path: url, importer }) => {
@@ -271,7 +265,7 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
                         loader: "js"
                     },
                     outfile: outFile,
-                    plugins: [stylePlugin, {
+                    plugins: [{
                             name: "web_modules",
                             setup(build) {
                                 build.onResolve({ filter: /./ }, async ({ path: url, importer }) => {

@@ -1,7 +1,7 @@
+import log from "@moderno/logger";
 import {expect} from "chai";
 import * as path from "path";
 import {useWebModules, WebModulesOptions} from "../src";
-import log from "@moderno/logger";
 
 log.level = "error";
 
@@ -27,6 +27,8 @@ describe("resolve import", function () {
             ...useWebModules(options)
         };
     }
+
+    let getMessage = (e: Error) => e.message;
 
     it("urls go unmodified", async function () {
 
@@ -59,13 +61,13 @@ describe("resolve import", function () {
         expect(await resolveImport("lit-html/lib/default-template-processor")).to.equal("/web_modules/lit-html.js");
     });
 
-    it("typescript sourcefiles in modules are treated as assets (not bundled)", async function () {
+    it("typescript sourcefiles in modules are treated as assets (coped, not bundled)", async function () {
 
         let {resolveImport, importMap} = setup("fixture");
 
         importMap.imports = {};
 
-        expect(await resolveImport("lit-html/src/lit-html")).to.equal("/node_modules/lit-html/src/lit-html.ts");
+        expect(await resolveImport("lit-html/src/lit-html")).to.equal("/web_modules/lit-html/src/lit-html.ts");
     });
 
     it("extensionless files are left extensionless", async function () {
@@ -74,7 +76,7 @@ describe("resolve import", function () {
 
         importMap.imports = {};
 
-        expect(await resolveImport("lit-html/LICENSE")).to.equal("/node_modules/lit-html/LICENSE");
+        expect(await resolveImport("lit-html/LICENSE")).to.equal("/web_modules/lit-html/LICENSE");
     });
 
     it("directories resolve to index", async function () {
@@ -143,15 +145,15 @@ describe("resolve import", function () {
     });
 
     it("bootstrap", async function () {
-        let {resolveImport} = setup("fixture");
+        let {resolveImport} = setup("fixture/bootstrap");
         expect(await resolveImport("bootstrap")).to.equal("/web_modules/bootstrap.js");
         expect(await resolveImport("bootstrap/dist/css/bootstrap.css", "/importer.js")).to.equal(
-            "/node_modules/bootstrap/dist/css/bootstrap.css?type=module"
+            "/web_modules/bootstrap/dist/css/bootstrap.css?type=module"
         );
     });
 
     it("lit-html", async function () {
-        let {resolveImport} = setup("fixture");
+        let {resolveImport} = setup("fixture/lit-html");
         expect(await resolveImport("lit-html")).to.equal("/web_modules/lit-html.js");
         expect(await resolveImport("lit-html/lit-html.js")).to.equal("/web_modules/lit-html.js");
         expect(await resolveImport("lit-html/lib/render.js")).to.equal("/web_modules/lit-html.js");
@@ -161,9 +163,9 @@ describe("resolve import", function () {
     it("relative imports of asset files", async function () {
         let {rootDir, resolveImport} = setup("fixture/workspaces");
         let importer = path.join(rootDir, "group/module-b/importer.js");
-        expect(await resolveImport("./styles").catch(e=>e.message)).to.have.string("Cannot find module './styles'");
+        expect(await resolveImport("./styles").catch(getMessage)).to.have.string("Cannot find module './styles'");
         expect(await resolveImport("../../styles.css", importer)).to.equal("../../styles.css?type=module");
-        expect(await resolveImport("module-a/styles.scss", importer)).to.equal("/node_modules/module-a/styles.scss?type=module");
+        expect(await resolveImport("module-a/styles.scss", importer)).to.equal("/workspaces/module-a/styles.scss?type=module");
     });
 
     it("tippy.js", async function () {
@@ -175,6 +177,6 @@ describe("resolve import", function () {
         let {resolveImport} = setup("fixture");
         expect(await resolveImport("react-icons/bs")).to.equal("/web_modules/react-icons/bs/index.esm.js");
         expect(await resolveImport("react-icons/bs", "/importer.tsx")).to.equal("/web_modules/react-icons/bs/index.esm.js");
-    })
+    });
 
 });
