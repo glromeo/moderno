@@ -33,12 +33,6 @@ module.exports = {
         require("./snapshots-middleware.js")
     ],
 
-    web_modules: {
-        standalone: [
-            "smooth-scrollbar"
-        ]
-    },
-
     messaging: {
         plugins: [
             require("./find-plugin.js"),

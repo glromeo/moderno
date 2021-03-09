@@ -44,7 +44,7 @@ function collectEntryModules(resolveOptions, squash, debug) {
         if (entryModule) {
             for (const dependency of collectDependencies(entryModule)) {
                 if (!squash.has(dependency)) {
-                    asciiTree === null || asciiTree === void 0 ? void 0 : asciiTree.add(dependency);
+                    asciiTree?.add(dependency);
                     if (visited.has(dependency)) {
                         if (visited.get(dependency) !== ancestor) {
                             entryModules.add(dependency);
@@ -52,16 +52,16 @@ function collectEntryModules(resolveOptions, squash, debug) {
                     }
                     else {
                         visited.set(dependency, ancestor);
-                        asciiTree === null || asciiTree === void 0 ? void 0 : asciiTree.enter();
+                        asciiTree?.enter();
                         collectEntryModules(readManifest(dependency), ancestor || dependency);
-                        asciiTree === null || asciiTree === void 0 ? void 0 : asciiTree.exit();
+                        asciiTree?.exit();
                     }
                 }
             }
         }
     };
     collectEntryModules(readManifest("."));
-    asciiTree === null || asciiTree === void 0 ? void 0 : asciiTree.write();
+    asciiTree?.write();
     return entryModules;
 }
 exports.collectEntryModules = collectEntryModules;

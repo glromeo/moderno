@@ -1,15 +1,14 @@
 import log from "@moderno/logger";
 import chalk from "chalk";
 import {Service, startService} from "esbuild";
-import {sassPlugin} from "esbuild-sass-plugin";
 import {parse} from "fast-url-parser";
-import {existsSync, mkdirSync, rmdirSync} from "fs";
+import {existsSync, mkdirSync, promises as fsp, rmdirSync} from "fs";
 import memoized from "nano-memoize";
 import path, {posix} from "path";
 import resolve, {Opts} from "resolve";
 import {generateCjsProxy, parseCjsReady} from "./cjs-entry-proxy";
 import {collectEntryModules} from "./entry-modules";
-import {isBare, parseModuleUrl, pathnameToModuleUrl} from "./es-import-utils";
+import {isBare, parseModuleUrl, pathnameToModuleUrl, toPosix} from "./es-import-utils";
 import {generateEsmProxy, parseEsmReady} from "./esm-entry-proxy";
 import {ImportResolver, WebModulesFactory, WebModulesOptions} from "./index";
 import {useNotifications} from "./notifications";
@@ -75,19 +74,18 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
     }
     mkdirSync(outDir, {recursive: true});
 
-    const importMap = {
-        imports: {
-            ...readImportMap(options.rootDir, outDir).imports,
-            ...readWorkspaces(options.rootDir).imports
-        }
-    };
+    const importMap = readImportMap(options.rootDir, outDir);
 
-    const squash = new Set<string>(options.squash);
+    const workspaces = readWorkspaces(options.rootDir);
+
+    const squash = new Set<string>(options.squash); // TODO: shall I resurrect squash feature?
     const entryModules = collectEntryModules(resolveOptions, squash);
     const isModule = /\.m?[tj]sx?$/;
 
     const ignore = function () {
     };
+
+    const isResolved = ((re) => re.test.bind(re))(/^\/(web_modules|workspaces|moderno)\//);
 
     /**
      *                       _          _____                           _
@@ -104,9 +102,7 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
      */
     const resolveImport: ImportResolver = async (url, importer?) => {
 
-        if (url[0] === "/" && /^\/(web_modules|moderno)\//.test(url)) {
-            return url;
-        }
+        if (url[0] === "/" && isResolved(url)) return url;
 
         let {
             hostname,
@@ -120,43 +116,30 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
 
         let resolved = importMap.imports[pathname];
         if (!resolved) {
-            let [module, filename] = parseModuleUrl(pathname);
-            if (module && !importMap.imports[module]) {
-                await bundleWebModule(module);
-                resolved = importMap.imports[pathname];
-            }
-            if (!resolved) {
-                if (module) {
-                    pathname = resolve.sync(pathname, resolveOptions);
-                    filename = pathnameToModuleUrl(pathname).slice(module.length + 1);
+            const [module] = parseModuleUrl(pathname);
+            if (module) {
+                const filename = resolve.sync(pathname, resolveOptions);
+                pathname = pathnameToModuleUrl(filename);
+                if (workspaces.has(module)) {
+                    resolved = posix.join(workspaces.get(module)!, pathname.slice(module.length + 1));
                 } else {
-                    const basedir = importer ? path.dirname(importer) : options.rootDir;
-                    pathname = resolve.sync(pathname, {...resolveOptions, basedir});
-                    let relative = path.relative(basedir, pathname).replace(/\\/g,"/");
-                    filename = isBare(relative) ? `./${relative}` : relative;
-                }
-                let ext = posix.extname(filename);
-                const type = importer ? resolveModuleType(ext, importer) : null;
-                if (type) {
-                    search = search ? `?type=${type}&${search.slice(1)}` : `?type=${type}`;
-                }
-                if (module) {
-                    if (ext === ".js" || ext === ".mjs") {
-                        let bundled = importMap.imports[posix.join(module, filename)];
-                        if (bundled) {
-                            resolved = bundled;
-                        } else {
-                            let target = `${module}/${filename}`;
-                            await bundleWebModule(target);
-                            resolved = `/web_modules/${target}`;
-                        }
-                    } else {
-                        resolved = `/node_modules/${module}/${filename}`;
+                    resolved = importMap.imports[pathname];
+                    if (!resolved) {
+                        await bundleWebModule(pathname);
+                        resolved = importMap.imports[pathname];
                     }
-                } else {
-                    resolved = filename;
                 }
+            } else {
+                const basedir = importer ? path.dirname(importer) : options.rootDir;
+                const filename = resolve.sync(pathname, {...resolveOptions, basedir});
+                pathname = toPosix(path.relative(basedir, filename));
+                resolved = isBare(pathname) ? `./${pathname}` : pathname;
             }
+        }
+
+        const type = importer ? resolveModuleType(resolved, importer) : null;
+        if (type) {
+            search = search ? `?type=${type}&${search.slice(1)}` : `?type=${type}`;
         }
 
         if (search) {
@@ -166,7 +149,8 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
         }
     };
 
-    function resolveModuleType(ext: string, importer: string): string | null {
+    function resolveModuleType(filename: string, importer: string): string | null {
+        const ext = posix.extname(filename);
         if (!isModule.test(ext) && isModule.test(importer)) {
             return "module";
         } else {
@@ -198,12 +182,6 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
 
     let esbuild: Service;
 
-    let stylePlugin = sassPlugin({
-        basedir: options.rootDir,
-        cache: false,
-        type: "style"
-    });
-
     let ready = Promise.all([
         startService(),
         parseCjsReady,
@@ -232,6 +210,19 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
                 notify(`nothing to bundle for: ${source}`, "success", true);
                 return;
             }
+            if (!(entryFile.endsWith(".js") || entryFile.endsWith(".mjs"))) {
+                importMap.imports[source] = `/web_modules/${source}`;
+                const outFile = path.resolve(outDir, source);
+                mkdirSync(path.dirname(outFile), {recursive: true});
+                await Promise.all([
+                    fsp.copyFile(entryFile, outFile),
+                    writeImportMap(outDir, importMap)
+                ]);
+                const elapsed = Date.now() - startTime;
+                log.info`copied: ${chalk.magenta(source)} in: ${chalk.magenta(String(elapsed))}ms`;
+                bundleNotification.update(`copied: ${source} in: ${elapsed}ms`, "success");
+                return;
+            }
             let entryUrl = pathnameToModuleUrl(entryFile);
             let pkg = closestManifest(entryFile);
             let isESM = pkg.module || pkg["jsnext:main"]
@@ -242,6 +233,12 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
             const [entryModule, pathname] = parseModuleUrl(source);
             if (entryModule && !importMap.imports[entryModule] && entryModule !== source) {
                 await bundleWebModule(entryModule);
+                if (importMap.imports[entryUrl]) {
+                    const elapsed = Date.now() - startTime;
+                    log.info`already bundled: ${chalk.magenta(source)}`;
+                    bundleNotification.update(`already bundled: ${source}`, "success");
+                    return;
+                }
             }
 
             let outName = `${stripExt(source)}.js`;
@@ -254,7 +251,7 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
                     ...options.esbuild,
                     entryPoints: [entryUrl],
                     outfile: outFile,
-                    plugins: [stylePlugin, {
+                    plugins: [{
                         name: "web_modules",
                         setup(build) {
                             build.onResolve({filter: /./}, async ({path: url, importer}) => {
@@ -313,7 +310,7 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
                         loader: "js"
                     },
                     outfile: outFile,
-                    plugins: [stylePlugin, {
+                    plugins: [{
                         name: "web_modules",
                         setup(build) {
                             build.onResolve({filter: /./}, async ({path: url, importer}) => {

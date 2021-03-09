@@ -1,3 +1,4 @@
+import log from "@moderno/logger";
 import chalk from "chalk";
 import corsMiddleware from "cors";
 import {parse as parseURL} from "fast-url-parser";
@@ -7,8 +8,7 @@ import {ServerResponse} from "http";
 import HttpStatus from "http-status-codes";
 import {Http2ServerResponse} from "http2";
 import memoized from "nano-memoize";
-import path, {posix} from "path";
-import log from "@moderno/logger";
+import path from "path";
 import {ModernoOptions} from "./configure";
 import {useResourceProvider} from "./providers/resource-provider";
 import {createRouter} from "./router";
@@ -53,6 +53,12 @@ export const useRequestHandler = memoized(<V extends Version>(options: ModernoOp
         });
     }
 
+    const crossorigin = options.cors.credentials === true
+        ? "crossorigin=use-credentials;"
+        : options.cors.credentials === false
+            ? "crossorigin=anonymous;"
+            : "crossorigin;";
+
     /**
      *  __        __         _                               ____
      *  \ \      / /__  _ __| | _____ _ __   __ _  ___ ___  |  _ \ ___  ___  ___  _   _ _ __ ___ ___  ___
@@ -86,7 +92,7 @@ export const useRequestHandler = memoized(<V extends Version>(options: ModernoOp
                     provideResource(link).catch(function () {
                         log.warn("failed to pre-warm cache with:", link);
                     });
-                    return `<${link}>; crossorigin; rel=preload; as=${link.endsWith(".css") ? "style" : "script"}`;
+                    return `<${link}>; rel=preload; ${crossorigin} as=${link.endsWith(".css") ? "style" : "script"}`;
                 });
             }
 

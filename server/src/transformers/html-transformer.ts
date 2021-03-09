@@ -58,9 +58,10 @@ export const useHtmlTransformer = memoized(config => {
 
                 if (name === "script" && !scriptContext) {
                     if (attribs.type === "module") {
-                        if (attribs.src) {
+                        const src = attribs.src;
+                        if (src) {
                             html.push(
-                                resolveImport(attribs.src, filename).then(relativeUrl => {
+                                resolveImport(src, filename).then(relativeUrl => {
                                     imports.add(relativeUrl);
                                     attribs.src = relativeUrl;
                                     return openTag(name, attribs);

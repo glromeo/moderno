@@ -1,2 +1,1 @@
-import { ImportMap } from "./utility";
-export declare function readWorkspaces(rootDir: string): ImportMap;
+export declare function readWorkspaces(rootDir: string): Map<string, string>;
