@@ -206,7 +206,6 @@ export type Args = {
     root?: string
     plugin?: string | string[]
     debug?: boolean
-    production?: boolean
 }
 
 export function configure(args: Args = {}, override?): Readonly<ModernoOptions> {

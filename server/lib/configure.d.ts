@@ -51,6 +51,5 @@ export declare type Args = {
     root?: string;
     plugin?: string | string[];
     debug?: boolean;
-    production?: boolean;
 };
 export declare function configure(args?: Args, override?: any): Readonly<ModernoOptions>;

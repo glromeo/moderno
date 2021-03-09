@@ -47,11 +47,6 @@ const args = yargs
         description: "debug",
         type: "boolean"
     })
-    .option("production", {
-        alias: ["p"],
-        description: "production mode",
-        type: "boolean"
-    })
     .help()
     .alias("help", "h")
     .argv;
