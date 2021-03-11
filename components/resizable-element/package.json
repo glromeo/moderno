@@ -1,0 +1,14 @@
+{
+  "name": "@moderno/resizable-element",
+  "version": "1.0.1",
+  "description": "Resizable container for html elements",
+  "main": "resizable-element.js",
+  "module": "resizable-element.js",
+  "license": "MIT",
+  "files": [
+    "resizable-element.js"
+  ],
+  "dependencies": {
+    "lit-element": "^2.4.0"
+  }
+}
