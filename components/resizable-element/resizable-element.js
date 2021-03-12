@@ -21,8 +21,8 @@ window.addEventListener("mouseup", event => {
 
 const TRANSITION_MS = 33;
 
-@customElement("resizable-section")
-class ResizableSection extends LitElement {
+@customElement("resizable-element")
+class ResizableElement extends LitElement {
 
     // language=CSS
     static styles = [css`
@@ -129,6 +129,8 @@ class ResizableSection extends LitElement {
             release = null;
             if (this.persist) {
                 localStorage.setItem(this.persist, this.style.cssText);
+                let {width, height} = this.getBoundingClientRect();
+                this.dispatchEvent(new CustomEvent("resized", {detail: {target:this, width, height}}))
             }
         };
 

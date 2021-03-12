@@ -96,7 +96,7 @@ export class TestReport extends LitElement {
         const level = failedCount > 0 ? "danger" : pendingCount > 0 ? "warning" : "success";
 
         return html`
-            <resizable-section class="pt-2" persist="report" top>
+            <resizable-element class="pt-2" persist="report" top>
                 <div id="report" class="h-100 w-100 d-flex flex-column position-relative surface">
                     <div class="pace" style="display: ${this.running ? "block" : "none"}">
                         <div class="pace-progress">
@@ -132,7 +132,7 @@ export class TestReport extends LitElement {
                         </div>
                     </div>
                 </div>
-            </resizable-section>        
+            </resizable-element>        
         `;
     }
 }

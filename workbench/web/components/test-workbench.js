@@ -83,7 +83,7 @@ export class TestWorkbench extends LitElement {
     render() {
         return html`
             <div class="w-100 h-100 d-flex align-items-stretch backdrop" style="overflow-x: auto">
-                <resizable-section id="nav" class="pr-2 d-flex flex-column" persist="nav:resizer" right>
+                <resizable-element id="nav" class="pr-2 d-flex flex-column" persist="nav:resizer" right>
                     <slot name="navigator"></slot>
                     <div id="pills" class="m-2 d-flex flex-row align-items-center">
                         <div class="p-2 rounded-pill surface border border-dark" style="min-height: 3.2rem; min-width: 3.2rem;">
@@ -94,7 +94,7 @@ export class TestWorkbench extends LitElement {
                             <alert-badge .alerts=${this.changed} style="top: -2.25em;"></alert-badge>
                         </div>
                     </div>
-                </resizable-section>
+                </resizable-element>
                 <div class="workbench flex-fill">
                     <slot name="fixtures"></slot>
                     <slot name="report"></slot>                

@@ -26,6 +26,9 @@ export function defaultOptions(): WebModulesOptions {
     return require(require.resolve(`${process.cwd()}/web-modules.config.js`));
 }
 
+const IGNORE_ERROR = () => {
+};
+
 /**
  *   __        __   _       __  __           _       _
  *   \ \      / /__| |__   |  \/  | ___   __| |_   _| | ___  ___
@@ -102,7 +105,10 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
      */
     const resolveImport: ImportResolver = async (url, importer?) => {
 
-        if (url[0] === "/" && isResolved(url)) return url;
+        if (url[0] === "/" && isResolved(url)) {
+            log.warn("trying to re-resolve:", url, "from:", importer);
+            return url;
+        }
 
         let {
             hostname,
@@ -216,6 +222,7 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
                 mkdirSync(path.dirname(outFile), {recursive: true});
                 await Promise.all([
                     fsp.copyFile(entryFile, outFile),
+                    fsp.copyFile(entryFile + ".map", outFile + ".map").catch(IGNORE_ERROR),
                     writeImportMap(outDir, importMap)
                 ]);
                 const elapsed = Date.now() - startTime;
