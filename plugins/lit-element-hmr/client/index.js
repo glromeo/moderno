@@ -47,7 +47,11 @@ customElements.define = function (name, clazz, options) {
     let key = window.$HotElementUrl$+" "+name;
     if (!hotElements.has(key)) {
         hotElements.set(key, {name, clazz, options});
-        originalDefine.apply(this, arguments);
+        try {
+            originalDefine.apply(this, arguments);
+        } catch (e) {
+            console.error("unable to re-define:", name);
+        }
     } else {
         performHotElementRefresh.call(hotElements.get(key).clazz, name.toUpperCase(), clazz);
     }

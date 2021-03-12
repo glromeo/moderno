@@ -43,6 +43,8 @@ function defaultOptions() {
     return require(require.resolve(`${process.cwd()}/web-modules.config.js`));
 }
 exports.defaultOptions = defaultOptions;
+const IGNORE_ERROR = () => {
+};
 exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
     if (!options.environment)
         options.environment = "development";
@@ -90,8 +92,10 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
     };
     const isResolved = ((re) => re.test.bind(re))(/^\/(web_modules|workspaces|moderno)\//);
     const resolveImport = async (url, importer) => {
-        if (url[0] === "/" && isResolved(url))
+        if (url[0] === "/" && isResolved(url)) {
+            logger_1.default.warn("trying to re-resolve:", url, "from:", importer);
             return url;
+        }
         let { hostname, pathname, search } = fast_url_parser_1.parse(url);
         if (hostname !== null) {
             return url;
@@ -183,6 +187,7 @@ exports.useWebModules = nano_memoize_1.default((options = defaultOptions()) => {
                 fs_1.mkdirSync(path_1.default.dirname(outFile), { recursive: true });
                 await Promise.all([
                     fs_1.promises.copyFile(entryFile, outFile),
+                    fs_1.promises.copyFile(entryFile + ".map", outFile + ".map").catch(IGNORE_ERROR),
                     utility_1.writeImportMap(outDir, importMap)
                 ]);
                 const elapsed = Date.now() - startTime;
