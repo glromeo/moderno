@@ -3,6 +3,12 @@ import icons from "./icons.js";
 const H_SCROLL_BUFFER_PX = 150;
 const V_SCROLL_BUFFER_PX = 50;
 
+/**
+ * sheet: it's used to offset (see sticky-sizer) the top left of the cells so that they align with the headers
+ *        note that it has a dimension of 0x0 and cells are shown because overflow-x and overflow-y are visible
+ *
+ * @type {HTMLTemplateElement}
+ */
 const template = document.createElement("template");
 template.innerHTML = `
 <div id="view-port" style="width: 100%; height: 100%; overflow: auto">
@@ -49,7 +55,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         this.styleOverride = new CSSStyleSheet();
         this.styleOverride.replaceSync(``);
 
-        this.attachShadow({mode: 'open'}).adoptedStyleSheets = [
+        this.attachShadow({mode: "open"}).adoptedStyleSheets = [
             style,
             this.styleOverride
         ];
@@ -121,19 +127,24 @@ customElements.define("virtualized-grid", class extends HTMLElement {
 
     connectedCallback() {
 
-        this.theme(this.getAttribute("theme") || "light")
+        this.theme(this.getAttribute("theme") || "light");
         this.init();
 
-        let pendingSrollAnimationFrame = null;
+        let pendingRefreshViewport = null;
         const refreshViewPort = () => {
-            cancelAnimationFrame(pendingSrollAnimationFrame);
-            pendingSrollAnimationFrame = requestAnimationFrame(this.refreshViewPort);
+            cancelAnimationFrame(pendingRefreshViewport);
+            pendingRefreshViewport = requestAnimationFrame(this.refreshViewPort);
         };
         this.viewPort.addEventListener("scroll", refreshViewPort);
 
-        const resizeObserver = new ResizeObserver(() => {
-            this.resizeViewPort();
-            this.refreshViewPort();
+        let pendingResize = null;
+        const resizeObserver = new ResizeObserver(([entry]) => {
+            cancelAnimationFrame(pendingResize);
+            pendingResize = requestAnimationFrame(() => {
+                console.log("resize observer:", entry);
+                this.resizeViewPort();
+                this.refreshViewPort();
+            });
         });
         resizeObserver.observe(this.viewPort);
 
@@ -146,7 +157,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
 
     init({columns = [], rows = []} = {}) {
 
-        console.log('initialising grid');
+        console.log("initialising grid");
 
         this.rows = rows;
         this.rows.sticky = [];
@@ -159,7 +170,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         const viewPortHeight = this.viewPort.clientHeight + V_SCROLL_BUFFER_PX;
 
         let columnIndex = this.leftIndex;
-        let column, stickyRowsHTML = ''
+        let column, stickyRowsHTML = "";
         while ((column = this.columns[columnIndex]) && column.left < viewPortWidth) {
             stickyRowsHTML += this.createColumnHeaderCell(column);
             ++columnIndex;
@@ -168,7 +179,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         this.rightIndex = columnIndex;
 
         let rowIndex = this.topIndex;
-        let row, stickyColumnsHTML = ''
+        let row, stickyColumnsHTML = "";
         while ((row = rows[rowIndex]) && row.top < viewPortHeight) {
             stickyColumnsHTML += this.createRowHeaderCell(row);
             ++rowIndex;
@@ -179,10 +190,10 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         this.addEventListeners();
         this.replaceStyle();
 
-        let sheetHTML = ''
+        let sheetHTML = "";
         for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; ++rowIndex) {
             let row = rows[rowIndex];
-            let rowHTML = ``
+            let rowHTML = ``;
             for (let columnIndex = this.leftIndex; columnIndex < this.rightIndex; ++columnIndex) {
                 let column = columns[columnIndex];
                 rowHTML += this.createCell(column, row);
@@ -195,7 +206,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
             scrollLeft: this.viewPort.scrollLeft,
             scrollTop: this.viewPort.scrollTop,
             clientWidth: this.viewPort.clientWidth,
-            clientHeight: this.viewPort.clientHeight,
+            clientHeight: this.viewPort.clientHeight
         };
     }
 
@@ -236,7 +247,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
             if (!primaryButtonPressed) {
                 handle.classList.remove("active");
                 cell.style.width = null;
-                document.body.removeEventListener('pointermove', mouseDragHandler);
+                document.body.removeEventListener("pointermove", mouseDragHandler);
                 return;
             }
             let width = initialWidth + event.pageX - initialPageX;
@@ -259,7 +270,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
                 this.replaceStyle();
             }
         };
-        document.body.addEventListener('pointermove', mouseDragHandler);
+        document.body.addEventListener("pointermove", mouseDragHandler);
     }
 
     columnFitCallback(event) {
@@ -272,7 +283,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         let sizer = this.sheet.firstElementChild.firstElementChild.cloneNode(true);
         let textSizer = sizer.firstElementChild;
         sizer.style.cssText = `z-index: 1000;background: red; left:0; top: 0; position: absolute; width: unset; height: unset;`;
-        this.sheet.prepend(sizer)
+        this.sheet.prepend(sizer);
 
         const columnIndex = Number(handle.getAttribute("column"));
         const column = this.columns[columnIndex];
@@ -318,7 +329,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
             const primaryButtonPressed = event.buttons === 1;
             if (!primaryButtonPressed) {
                 handle.classList.remove("active");
-                document.body.removeEventListener('pointermove', mouseDragHandler);
+                document.body.removeEventListener("pointermove", mouseDragHandler);
                 return;
             }
             let height = initialHeight + event.pageY - initialPageY;
@@ -341,7 +352,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
             this.replaceStyle();
         };
 
-        document.body.addEventListener('pointermove', mouseDragHandler);
+        document.body.addEventListener("pointermove", mouseDragHandler);
     }
 
     refreshViewPort() {
@@ -365,8 +376,8 @@ customElements.define("virtualized-grid", class extends HTMLElement {
             scrollLeft: this.viewPort.scrollLeft,
             scrollTop: this.viewPort.scrollTop,
             clientWidth: this.viewPort.clientWidth,
-            clientHeight: this.viewPort.clientHeight,
-        }
+            clientHeight: this.viewPort.clientHeight
+        };
 
         // =========================================================================================================
         // LEAVE
@@ -392,7 +403,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         let rightIndex = this.rightIndex;
         if (horizontalScroll > 0 || horizontalResize > 0) {
             let column;
-            let html = '';
+            let html = "";
             while ((column = this.columns[rightIndex]) && column.left <= visibleRight) {
                 html += this.createColumnHeaderCell(column);
                 ++rightIndex;
@@ -403,7 +414,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         let leftIndex = this.leftIndex;
         if (horizontalScroll < 0) {
             let column;
-            let html = '';
+            let html = "";
             while ((column = this.columns[--leftIndex]) && (column.left + column.width) >= visibleLeft) {
                 html = this.createColumnHeaderCell(column) + html;
             }
@@ -503,7 +514,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         let rowElement = this.sheet.firstElementChild;
         for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; rowIndex++) {
             let row = this.rows[rowIndex];
-            let html = '';
+            let html = "";
             let columnIndex = this.rightIndex;
             while (columnIndex < enterRightIndex) {
                 html += this.createCell(this.columns[columnIndex++], row);
@@ -518,7 +529,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         let rowElement = this.sheet.firstElementChild;
         for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; rowIndex++) {
             let row = this.rows[rowIndex];
-            let html = '';
+            let html = "";
             let columnIndex = enterLeftIndex;
             while (columnIndex < this.leftIndex) {
                 html += this.createCell(this.columns[columnIndex++], row);
@@ -532,10 +543,10 @@ customElements.define("virtualized-grid", class extends HTMLElement {
     enterBottom(visibleBottom, leftIndex, rightIndex) {
         const {rows, columns} = this;
         let rowIndex = this.bottomIndex;
-        let headerHTML = '', rowsHTML = '';
+        let headerHTML = "", rowsHTML = "";
         let row;
         while ((row = rows[rowIndex]) && (row.top < visibleBottom)) {
-            let rowHTML = '';
+            let rowHTML = "";
             for (let columnIndex = leftIndex; columnIndex < rightIndex; columnIndex++) {
                 rowHTML += this.createCell(columns[columnIndex], row);
             }
@@ -551,10 +562,10 @@ customElements.define("virtualized-grid", class extends HTMLElement {
     enterTop(visibleTop, leftIndex, rightIndex) {
         const {rows, columns} = this;
         let rowIndex = this.topIndex;
-        let headerHTML = '', rowsHTML = '';
+        let headerHTML = "", rowsHTML = "";
         let row;
         while ((row = rows[--rowIndex]) && (row.top + row.height >= visibleTop)) {
-            let rowHTML = '';
+            let rowHTML = "";
             for (let columnIndex = leftIndex; columnIndex < rightIndex; columnIndex++) {
                 rowHTML += this.createCell(columns[columnIndex], row);
             }
@@ -570,7 +581,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         const searching = typeof search === "string";
         return `<div class="cell c-${index}" ${sort && `sort="${sort}"` || ""} ${searching && `search="${search}"` || ""}>
             <div class="handle" column="${index}"></div>
-            ${searching ? `<div class="label">${label}</div>`: ""}
+            ${searching ? `<div class="label">${label}</div>` : ""}
             <div class="text">                
                 ${searching ? `<input type="text" value="${search}" placeholder="search">` : label}
                 <svg class="sort" viewBox="0 0 512 512"><path fill="currentColor" d="${icons.arrowUp}"></path></svg>
@@ -596,11 +607,11 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         let style = `.handle[row]{width:${this.sheetLeft}px;}\n.handle[column]{height:${this.sheetTop}px;}\n`;
         for (let columnIndex = this.leftIndex; columnIndex < this.rightIndex; columnIndex++) {
             let column = this.columns[columnIndex];
-            style += `.c-${columnIndex}{left:${column.left}px;width:${column.width}px;}\n`
+            style += `.c-${columnIndex}{left:${column.left}px;width:${column.width}px;}\n`;
         }
         for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; rowIndex++) {
             let row = this.rows[rowIndex];
-            style += `.r-${rowIndex}{top:${row.top}px;height:${row.height}px;}\n`
+            style += `.r-${rowIndex}{top:${row.top}px;height:${row.height}px;}\n`;
         }
         this.styleOverride.replaceSync(style);
     }
@@ -610,7 +621,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
             handle.classList.add("actionable");
             if (handle.hasAttribute("column")) {
                 handle.addEventListener("mousedown", this.columnResizeCallback);
-                handle.addEventListener("click", (event)=>{
+                handle.addEventListener("click", (event) => {
                     event.preventDefault();
                     event.stopPropagation();
                 });
@@ -618,7 +629,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
 
                 const columnIndex = Number(handle.getAttribute("column"));
                 const cell = handle.nextElementSibling;
-                cell.addEventListener("mousedown", (event)=>{
+                cell.addEventListener("mousedown", (event) => {
                     if (!event.target.classList.contains("text")) {
                         event.preventDefault();
                     }
@@ -657,7 +668,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
                     // }
                     this.init({
                         columns: this.columns,
-                        rows: this.rows,
+                        rows: this.rows
                     });
                 });
                 cell.lastElementChild.addEventListener("click", (event) => {
@@ -670,7 +681,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
                     }
                     this.init({
                         columns: this.columns,
-                        rows: this.rows,
+                        rows: this.rows
                     });
                 });
             } else {
@@ -680,21 +691,3 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         }
     }
 });
-
-function calculateScrollbarDimensions() {
-    let sample = document.createElement("div");
-    sample.style.cssText = `
-        width: 100px;
-        height: 100px;
-        overflow: scroll;
-        position: absolute;
-        visibility: hidden;
-	`;
-    document.body.appendChild(sample);
-    let dimensions = {
-        width: sample.offsetWidth - sample.clientWidth,
-        height: sample.offsetHeight - sample.clientHeight
-    };
-    document.body.removeChild(sample);
-    return dimensions;
-}

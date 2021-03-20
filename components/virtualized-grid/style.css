@@ -86,8 +86,6 @@
     position: absolute;
     top: var(--stub-height);
     left: var(--stub-width);
-    width: calc(100% - var(--stub-width));
-    height: calc(100% - var(--stub-height));
 }
 
 .cell {
