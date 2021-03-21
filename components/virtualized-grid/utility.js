@@ -16,3 +16,13 @@ export function calculateScrollbarDimensions() {
     document.body.removeChild(sample);
     return dimensions;
 }
+
+const REGEX_SPECIAL_CHARS = /([-*+?.^${}(|)[\]])/g;
+
+export function escapeRegex(str) {
+    return str.replace(REGEX_SPECIAL_CHARS, '\\$1');
+}
+
+export function toggleSort(column) {
+    column.sort = !column.sort ? "asc" : column.sort = column.sort === "asc" ? "desc" : undefined;
+}

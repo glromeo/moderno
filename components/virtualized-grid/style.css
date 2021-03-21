@@ -168,17 +168,17 @@ input.heading:valid ~ label.heading {
     padding: 0;
 }
 
-input.heading:focus ~ label.heading .sort,
-input.heading:valid ~ label.heading .sort {
+input.heading:focus ~ label.heading svg.sort,
+input.heading:valid ~ label.heading svg.sort {
     display: none;
 }
 
-.cell input.heading:focus ~ .search,
-.cell input.heading:valid ~ .search {
+.cell input.heading:focus ~ svg.search,
+.cell input.heading:valid ~ svg.search {
     opacity: 1;
 }
 
-.cell .sort {
+.cell svg.sort {
     position: absolute;
     margin-top: -2px;
     margin-left: 3px;
@@ -188,19 +188,19 @@ input.heading:valid ~ label.heading .sort {
     z-index: 1000;
 }
 
-.cell:hover:not([sort]) .sort {
+.cell:hover:not([sort]) svg.sort {
     opacity: .25;
 }
 
-.cell[sort=desc] .sort {
+.cell[sort=desc] svg.sort {
     transform: scaleY(-1);
 }
 
-.cell[sort] .sort {
+.cell[sort] svg.sort {
     opacity: 1;
 }
 
-.cell .search {
+.cell svg.search {
     position: absolute;
     bottom: 5px;
     right: 5px;
@@ -209,11 +209,11 @@ input.heading:valid ~ label.heading .sort {
     cursor: pointer;
 }
 
-.cell:hover:not([search]) .search {
+.cell:hover:not([search]) svg.search {
     opacity: .25;
 }
 
-.cell[search] .search {
+.cell[search] svg.search {
     opacity: 1;
 }
 
