@@ -67,10 +67,24 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         this.columnFitCallback = this.columnFitCallback.bind(this);
     }
 
+    filter() {
+        const filters = this.columns.filter(c => c.filter).map(c => row => c.filter(row[c.name]));
+        this.rows = this.properties.rows.filter(r => filters.every(f => f(r)));
+    }
+
+    filterRow(row) {
+        for (const column of this.columns) {
+            if (!column.filter(row[column.name], row)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     connectedCallback() {
 
         this.theme(this.getAttribute("theme") || "light");
-        this.init();
+        this.render();
 
         let pendingRefreshViewport = null;
         const refreshViewPort = () => {
@@ -97,9 +111,9 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         };
     }
 
-    init({columns = [], rows = []} = {}) {
+    render({columns = [], rows = []} = {}) {
 
-        console.log("initialising grid");
+        console.log("rendering grid");
 
         this.rows = rows;
         this.rows.sticky = [];
@@ -476,7 +490,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
                     // for (const cell of this.scrollArea.querySelectorAll(".cell")) {
                     //     cell.style.backgroundColor = "red";
                     // }
-                    this.init({
+                    this.render({
                         columns: this.columns,
                         rows: this.rows
                     });
@@ -489,7 +503,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
                     const column = this.columns[columnIndex];
                     column.search = input.value;
                     const search = column.search ? new RegExp(column.search) : null;
-                    this.init({
+                    this.render({
                         columns: this.columns,
                         rows: search ? this.rows.filter(row => search.test(row[column.name])) : this.properties.rows
                     });
