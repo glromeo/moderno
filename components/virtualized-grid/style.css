@@ -1,4 +1,5 @@
 :host {
+    --padding: 8px;
     --stub-width: 0;
     --stub-height: 0;
     display: contents;
@@ -20,7 +21,7 @@
 #stub {
     position: sticky;
     float: left;
-    z-index: 100;
+    z-index: 30;
     left: 0;
     top: 0;
     width: var(--stub-width);
@@ -101,10 +102,80 @@
     -webkit-user-select: text;
     user-select: text;
     height: 100%;
-    padding: 8px;
+    padding: var(--padding);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.cell > .content {
+    position: relative;
+    height: 100%;
+}
+
+input.heading {
+    position: absolute;
+    width: 100%;
+    padding: calc(var(--padding) * 1.66) var(--padding) 0 var(--padding);
+    border: none;
+    outline: none;
+    cursor: text;
+}
+
+input.heading::-webkit-input-placeholder {
+    transition: color 300ms ease;
+}
+
+input.heading:not(:focus)::-webkit-input-placeholder {
+    color: transparent;
+}
+
+hr.heading {
+    position: absolute;
+    width: 100%;
+    left: 0;
+    bottom: 0;
+    margin: -2px 0;
+    height: 2px;
+    border-bottom: 1px var(--primary-color);
+    background: var(--primary-color);
+    will-change: transform, visibility;
+    transition: all 200ms ease-out;
+    transform: scaleX(0);
+    visibility: hidden;
+    z-index: 1000;
+}
+
+input.heading:focus ~ hr.heading {
+    transform: scaleX(1);
+    visibility: visible;
+}
+
+label.heading {
+    position: absolute;
+    padding: 8px;
+    transform-origin: 0 -150%;
+    transition: transform 300ms ease;
+    user-select: text;
+}
+
+input.heading:focus ~ label.heading,
+input.heading:valid ~ label.heading {
+    color: var(--primary-color);
+    transform: scale(0.75);
+    top: 7px;
+    left: 7px;
+    padding: 0;
+}
+
+input.heading:focus ~ label.heading .sort,
+input.heading:valid ~ label.heading .sort {
+    display: none;
+}
+
+.cell input.heading:focus ~ .search,
+.cell input.heading:valid ~ .search {
+    opacity: 1;
 }
 
 .cell .sort {
@@ -113,6 +184,8 @@
     margin-left: 3px;
     opacity: 0;
     height: 60%;
+    cursor: pointer;
+    z-index: 1000;
 }
 
 .cell:hover:not([sort]) .sort {
@@ -129,10 +202,11 @@
 
 .cell .search {
     position: absolute;
-    margin-top: -2px;
+    bottom: 5px;
     right: 5px;
     opacity: 0;
     height: 60%;
+    cursor: pointer;
 }
 
 .cell:hover:not([search]) .search {
