@@ -1,5 +1,5 @@
 import {cloneGridTemplate, createCell, createColumnHeaderCell, createRowHeaderCell} from "./templates.js";
-import {escapeRegex, toggleSort} from "./utility.js";
+import {escapeRegex, toggleSort, visibleRange} from "./utility.js";
 
 const H_SCROLL_BUFFER_PX = 150;
 const V_SCROLL_BUFFER_PX = 50;
@@ -36,8 +36,8 @@ customElements.define("virtualized-grid", class extends HTMLElement {
 
         this.viewPort = this.shadowRoot.getElementById("view-port");
         this.scrollArea = this.shadowRoot.getElementById("scroll-area");
-        this.stickyRows = this.shadowRoot.getElementById("sticky-rows");
-        this.stickyColumns = this.shadowRoot.getElementById("sticky-columns");
+        this.topHeader = this.shadowRoot.getElementById("top-header");
+        this.leftHeader = this.shadowRoot.getElementById("left-header");
         this.sheet = this.shadowRoot.getElementById("sheet");
 
         this.properties = {
@@ -63,13 +63,6 @@ customElements.define("virtualized-grid", class extends HTMLElement {
 
         this.rows = [];
         this.columns = [];
-        this.sticky = {
-            rows: [],
-            columns: [],
-        }; // TODO: Not Implemented Yet
-
-        this.topIndex = 0;
-        this.leftIndex = 0;
 
         this.refreshViewPort = this.refreshViewPort.bind(this);
         this.columnResizeCallback = this.columnResizeCallback.bind(this);
@@ -121,7 +114,7 @@ customElements.define("virtualized-grid", class extends HTMLElement {
             cancelAnimationFrame(pendingResize);
             pendingResize = requestAnimationFrame(() => {
                 console.log("resize observer:", entry);
-                this.resizeViewPort();
+                this.resizeScrollArea();
                 this.refreshViewPort();
             });
         });
@@ -137,45 +130,46 @@ customElements.define("virtualized-grid", class extends HTMLElement {
     render() {
         console.log("rendering grid");
 
-        this.resizeViewPort();
+        const {
+            scrollLeft,
+            scrollTop,
+            clientWidth,
+            clientHeight
+        } = this.viewPort;
 
-        const viewPortWidth = this.viewPort.clientWidth + H_SCROLL_BUFFER_PX;
-        const viewPortHeight = this.viewPort.clientHeight + V_SCROLL_BUFFER_PX;
-        this.renderColumnHeaders(viewPortWidth);
-        this.renderRowHeaders(viewPortHeight);
+        this.resizeScrollArea();
+
+        // todo: move buffer constants in utility
+
+        this.renderColumnHeaders(scrollLeft - H_SCROLL_BUFFER_PX, scrollLeft + clientWidth + H_SCROLL_BUFFER_PX);
+        this.renderRowHeaders(scrollTop - V_SCROLL_BUFFER_PX, scrollTop + clientHeight + V_SCROLL_BUFFER_PX);
 
         this.addEventListeners();
         this.replaceStyle();
         this.renderSheet();
 
         this.state = {
-            scrollLeft: this.viewPort.scrollLeft,
-            scrollTop: this.viewPort.scrollTop,
-            clientWidth: this.viewPort.clientWidth,
-            clientHeight: this.viewPort.clientHeight
+            scrollLeft,
+            scrollTop,
+            clientWidth,
+            clientHeight
         };
+
+        this.refreshViewPort();
     }
 
-    renderColumnHeaders(viewPortWidth) {
-        let columnIndex = this.leftIndex;
-        let column, stickyRowsHTML = "";
-        while ((column = this.columns[columnIndex]) && column.left < viewPortWidth) {
-            stickyRowsHTML += createColumnHeaderCell(column);
-            ++columnIndex;
-        }
-        this.stickyRows.innerHTML = stickyRowsHTML;
-        this.rightIndex = columnIndex;
+    renderColumnHeaders(viewPortLeft, viewPortRight) {
+        let [leftIndex, rightIndex] = visibleRange(this.columns, "left", "width", viewPortLeft, viewPortRight);
+        this.leftIndex = leftIndex;
+        this.rightIndex = rightIndex;
+        this.topHeader.innerHTML = this.columns.slice(leftIndex, rightIndex).map(createColumnHeaderCell).join("");
     }
 
-    renderRowHeaders(viewPortHeight) {
-        let rowIndex = this.topIndex;
-        let row, stickyColumnsHTML = "";
-        while ((row = this.rows[rowIndex]) && row.top < viewPortHeight) {
-            stickyColumnsHTML += createRowHeaderCell(row);
-            ++rowIndex;
-        }
-        this.stickyColumns.innerHTML = stickyColumnsHTML;
-        this.bottomIndex = rowIndex;
+    renderRowHeaders(viewPortTop, viewPortBottom) {
+        let [topIndex, bottomIndex] = visibleRange(this.rows, "top", "height", viewPortTop, viewPortBottom);
+        this.topIndex = topIndex;
+        this.bottomIndex = bottomIndex;
+        this.leftHeader.innerHTML = this.rows.slice(topIndex, bottomIndex).map(createRowHeaderCell).join("");
     }
 
     renderSheet() {
@@ -192,19 +186,19 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         this.sheet.innerHTML = sheetHTML;
     }
 
-    resizeViewPort() {
+    resizeScrollArea() {
         console.log("resizing viewport");
         const stickySizer = this.shadowRoot.getElementById("sticky-sizer");
 
         this.sheetLeft = stickySizer.clientWidth;
         this.sheetTop = stickySizer.clientHeight;
 
-        const stickyWidthPx = `${this.sticky.columns.reduce(totalColumnWidth, this.sheetLeft)}px`;
+        const stickyWidthPx = `${this.sheetLeft}px`;
         this.style.setProperty("--stub-width", stickyWidthPx);
         this.width = this.columns.reduce(totalColumnWidth, 0);
         this.scrollArea.style.width = `${this.width}px`;
 
-        const stickyHeightPx = `${this.sticky.rows.reduce(totalRowHeight, this.sheetTop)}px`;
+        const stickyHeightPx = `${this.sheetTop}px`;
         this.style.setProperty("--stub-height", stickyHeightPx);
         this.height = this.rows.reduce(totalRowHeight, 0);
         this.scrollArea.style.height = `${this.height}px`;
@@ -291,40 +285,58 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         // ENTER
         // =========================================================================================================
 
-        let rightIndex = this.rightIndex;
-        if (horizontalScroll > 0 || horizontalResize > 0) {
-            let column;
-            let html = "";
-            while ((column = this.columns[rightIndex]) && column.left <= visibleRight) {
-                html += createColumnHeaderCell(column);
-                ++rightIndex;
-            }
-            this.stickyRows.insertAdjacentHTML("beforeend", html);
-        }
-
         let leftIndex = this.leftIndex;
+        let rightIndex = this.rightIndex;
+
         if (horizontalScroll < 0) {
-            let column;
-            let html = "";
+            let column, headerHTML = "";
             while ((column = this.columns[--leftIndex]) && (column.left + column.width) >= visibleLeft) {
-                html = createColumnHeaderCell(column) + html;
+                headerHTML = createColumnHeaderCell(column) + headerHTML;
             }
             ++leftIndex;
-            this.stickyRows.insertAdjacentHTML("afterbegin", html);
+            if (headerHTML) {
+                this.topHeader.insertAdjacentHTML("afterbegin", headerHTML);
+                const entered = this.columns.slice(leftIndex, this.leftIndex);
+                let rowElement = this.sheet.firstElementChild;
+                for (let rowIndex = this.topIndex; rowElement && rowIndex < this.bottomIndex; rowIndex++) {
+                    let rowHTML = "";
+                    for (const column of entered) {
+                        rowHTML += createCell(column, this.rows[rowIndex]);
+                    }
+                    rowElement.insertAdjacentHTML("afterbegin", rowHTML);
+                    rowElement = rowElement.nextElementSibling;
+                }
+                this.leftIndex = leftIndex;
+            }
         }
 
-        if (leftIndex < this.leftIndex) {
-            this.enterLeft(leftIndex);
-        }
-        if (rightIndex > this.rightIndex) {
-            this.enterRight(rightIndex);
+        if (horizontalScroll > 0 || horizontalResize > 0) {
+            let column, headerHTML = "";
+            while ((column = this.columns[rightIndex]) && column.left <= visibleRight) {
+                headerHTML += createColumnHeaderCell(column);
+                ++rightIndex;
+            }
+            if (headerHTML) {
+                this.topHeader.insertAdjacentHTML("beforeend", headerHTML);
+                const entered = this.columns.slice(this.rightIndex, rightIndex);
+                let rowElement = this.sheet.firstElementChild;
+                for (let rowIndex = this.topIndex; rowElement && rowIndex < this.bottomIndex; rowIndex++) {
+                    let rowHTML = "";
+                    for (const column of entered) {
+                        rowHTML += createCell(column, this.rows[rowIndex]);
+                    }
+                    rowElement.insertAdjacentHTML("beforeend", rowHTML);
+                    rowElement = rowElement.nextElementSibling;
+                }
+                this.rightIndex = rightIndex;
+            }
         }
 
         if (verticalScroll < 0) {
-            this.enterTop(visibleTop, leftIndex, rightIndex);
+            this.enterTop(visibleTop);
         }
         if (verticalScroll > 0 || verticalResize > 0) {
-            this.enterBottom(visibleBottom, leftIndex, rightIndex);
+            this.enterBottom(visibleBottom);
         }
 
         this.addEventListeners();
@@ -332,10 +344,10 @@ customElements.define("virtualized-grid", class extends HTMLElement {
     }
 
     leaveTop(visibleTop) {
-        const {stickyColumns: rowHeader, sheet, rows} = this;
+        const {leftHeader, sheet, rows} = this;
         let row;
         while ((row = rows[this.topIndex]) && (row.top + row.height < visibleTop)) {
-            let headerCell = rowHeader.firstElementChild;
+            let headerCell = leftHeader.firstElementChild;
             if (headerCell) {
                 headerCell.remove();
                 sheet.firstElementChild.remove();
@@ -348,10 +360,10 @@ customElements.define("virtualized-grid", class extends HTMLElement {
     }
 
     leaveBottom(visibleBottom) {
-        const {stickyColumns: rowHeader, sheet, rows} = this;
+        const {leftHeader, sheet, rows} = this;
         let row;
         while ((row = rows[--this.bottomIndex]) && (row.top > visibleBottom)) {
-            let headerCell = rowHeader.lastElementChild;
+            let headerCell = leftHeader.lastElementChild;
             if (headerCell) {
                 headerCell.remove();
                 sheet.lastElementChild.remove();
@@ -364,10 +376,10 @@ customElements.define("virtualized-grid", class extends HTMLElement {
     }
 
     leaveLeft(visibleLeft) {
-        const {stickyRows: columnHeader, columns} = this;
+        const {topHeader, columns} = this;
         let column;
         while ((column = columns[this.leftIndex]) && (column.left + column.width < visibleLeft)) {
-            let headerCell = columnHeader.firstElementChild;
+            let headerCell = topHeader.firstElementChild;
             if (headerCell) {
                 headerCell.remove();
                 let rowElement = this.sheet.firstElementChild;
@@ -383,10 +395,10 @@ customElements.define("virtualized-grid", class extends HTMLElement {
     }
 
     leaveRight(visibleRight) {
-        const {stickyRows: columnHeader, columns} = this;
+        const {topHeader, columns} = this;
         let column;
         while ((column = columns[--this.rightIndex]) && (column.left > visibleRight)) {
-            let headerCell = columnHeader.lastElementChild;
+            let headerCell = topHeader.lastElementChild;
             if (headerCell) {
                 headerCell.remove();
                 let rowElement = this.sheet.firstElementChild;
@@ -401,71 +413,41 @@ customElements.define("virtualized-grid", class extends HTMLElement {
         }
     }
 
-    enterRight(enterRightIndex) {
-        let rowElement = this.sheet.firstElementChild;
-        for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; rowIndex++) {
-            let row = this.rows[rowIndex];
-            let html = "";
-            let columnIndex = this.rightIndex;
-            while (columnIndex < enterRightIndex) {
-                html += createCell(this.columns[columnIndex++], row);
-            }
-            rowElement.insertAdjacentHTML("beforeend", html);
-            rowElement = rowElement.nextElementSibling;
-        }
-        this.rightIndex = enterRightIndex;
-    }
-
-    enterLeft(enterLeftIndex) {
-        let rowElement = this.sheet.firstElementChild;
-        for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; rowIndex++) {
-            let row = this.rows[rowIndex];
-            let html = "";
-            let columnIndex = enterLeftIndex;
-            while (columnIndex < this.leftIndex) {
-                html += createCell(this.columns[columnIndex++], row);
-            }
-            rowElement.insertAdjacentHTML("afterbegin", html);
-            rowElement = rowElement.nextElementSibling;
-        }
-        this.leftIndex = enterLeftIndex;
-    }
-
-    enterBottom(visibleBottom, leftIndex, rightIndex) {
-        const {rows, columns} = this;
-        let rowIndex = this.bottomIndex;
-        let headerHTML = "", rowsHTML = "";
-        let row;
-        while ((row = rows[rowIndex]) && (row.top < visibleBottom)) {
-            let rowHTML = "";
-            for (let columnIndex = leftIndex; columnIndex < rightIndex; columnIndex++) {
-                rowHTML += createCell(columns[columnIndex], row);
-            }
-            rowsHTML = `${rowsHTML}<div row="${rowIndex}" class="row ${rowIndex % 2 ? "odd" : "even"}">${rowHTML}</div>`;
-            headerHTML += createRowHeaderCell(this.rows[rowIndex]);
-            ++rowIndex;
-        }
-        this.bottomIndex = rowIndex;
-        this.stickyColumns.insertAdjacentHTML("beforeend", headerHTML);
-        this.sheet.insertAdjacentHTML("beforeend", rowsHTML);
-    }
-
-    enterTop(visibleTop, leftIndex, rightIndex) {
+    enterTop(visibleTop) {
         const {rows, columns} = this;
         let rowIndex = this.topIndex;
         let headerHTML = "", rowsHTML = "";
         let row;
         while ((row = rows[--rowIndex]) && (row.top + row.height >= visibleTop)) {
             let rowHTML = "";
-            for (let columnIndex = leftIndex; columnIndex < rightIndex; columnIndex++) {
+            for (let columnIndex = this.leftIndex; columnIndex < this.rightIndex; columnIndex++) {
                 rowHTML += createCell(columns[columnIndex], row);
             }
             rowsHTML = `<div row="${rowIndex}" class="row ${rowIndex % 2 ? "odd" : "even"}">${rowHTML}</div>${rowsHTML}`;
             headerHTML = createRowHeaderCell(this.rows[rowIndex]) + headerHTML;
         }
-        this.topIndex = ++rowIndex;
-        this.stickyColumns.insertAdjacentHTML("afterbegin", headerHTML);
+        this.leftHeader.insertAdjacentHTML("afterbegin", headerHTML);
         this.sheet.insertAdjacentHTML("afterbegin", rowsHTML);
+        this.topIndex = ++rowIndex;
+    }
+
+    enterBottom(visibleBottom) {
+        const {rows, columns} = this;
+        let rowIndex = this.bottomIndex;
+        let headerHTML = "", rowsHTML = "";
+        let row;
+        while ((row = rows[rowIndex]) && (row.top < visibleBottom)) {
+            let rowHTML = "";
+            for (let columnIndex = this.leftIndex; columnIndex < this.rightIndex; columnIndex++) {
+                rowHTML += createCell(columns[columnIndex], row);
+            }
+            rowsHTML = `${rowsHTML}<div row="${rowIndex}" class="row ${rowIndex % 2 ? "odd" : "even"}">${rowHTML}</div>`;
+            headerHTML += createRowHeaderCell(this.rows[rowIndex]);
+            ++rowIndex;
+        }
+        this.leftHeader.insertAdjacentHTML("beforeend", headerHTML);
+        this.sheet.insertAdjacentHTML("beforeend", rowsHTML);
+        this.bottomIndex = rowIndex;
     }
 
     /**
@@ -652,12 +634,10 @@ customElements.define("virtualized-grid", class extends HTMLElement {
 
     replaceStyle() {
         let style = `.handle[row]{width:${this.sheetLeft}px;}\n.handle[column]{height:${this.sheetTop}px;}\n`;
-        for (let columnIndex = this.leftIndex; columnIndex < this.rightIndex; columnIndex++) {
-            let {index, left, width} = this.columns[columnIndex];
+        for (const {index, left, width} of this.columns.slice(this.leftIndex, this.rightIndex)) {
             style += `.c-${index}{left:${left}px;width:${width}px;}\n`;
         }
-        for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; rowIndex++) {
-            let {height, index, top} = this.rows[rowIndex];
+        for (const {height, index, top} of this.rows.slice(this.topIndex, this.bottomIndex)) {
             style += `.r-${index}{top:${top}px;height:${height}px;}\n`;
         }
         this.dynamicStyle.replaceSync(style);

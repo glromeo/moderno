@@ -17,8 +17,8 @@ template.innerHTML = `
             <div class="overflow right"></div>
             <div class="overflow bottom"></div>
         </div>
-        <div id="sticky-rows" class="header"></div>
-        <div id="sticky-columns" class="header"></div>
+        <div id="top-header" class="header"></div>
+        <div id="left-header" class="header"></div>
         <div id="sheet" class="sheet"></div>
     </div>
 </div>

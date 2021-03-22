@@ -54,7 +54,7 @@
     border-right: 1px solid var(--border-color);
 }
 
-#sticky-rows {
+#top-header {
     position: sticky;
     top: 0;
     width: 100%;
@@ -64,11 +64,11 @@
     margin-left: var(--stub-width);
 }
 
-#sticky-rows .cell {
+#top-header .cell {
     height: 100%;
 }
 
-#sticky-columns {
+#left-header {
     position: sticky;
     left: 0;
     width: var(--stub-width);
@@ -77,7 +77,7 @@
     box-shadow: 0 1px 3px var(--shadow-color);
 }
 
-#sticky-columns .cell {
+#left-header .cell {
     text-align: center;
     width: 100%;
     flex-direction: column;
