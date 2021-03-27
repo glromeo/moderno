@@ -13,8 +13,8 @@ import {
     visibleRange
 } from "./utility.js";
 
-const H_SCROLL_BUFFER_PX = 160;
-const V_SCROLL_BUFFER_PX = 90;
+const H_SCROLL_BUFFER_PX = 200;
+const V_SCROLL_BUFFER_PX = 150;
 
 /**
  * Custom component implementing the Grid
@@ -314,6 +314,7 @@ export class SleekGrid extends HTMLElement {
         if (verticalScroll < 0 || verticalResize < 0) {
             this.leaveBottom(visibleBottom);
         }
+
         if (horizontalScroll > 0) {
             this.leaveLeft(visibleLeft);
         }
@@ -435,6 +436,25 @@ export class SleekGrid extends HTMLElement {
         this.topIndex = ++rowIndex;
     }
 
+    enterBottom(visibleBottom) {
+        const {rows, columns} = this;
+        let rowIndex = this.bottomIndex;
+        let headerHTML = "", rowsHTML = "";
+        let row;
+        while ((row = rows[rowIndex]) && (row.top < visibleBottom)) {
+            let rowHTML = "";
+            for (let columnIndex = this.leftIndex; columnIndex < this.rightIndex; columnIndex++) {
+                rowHTML += createCell(columns[columnIndex], row);
+            }
+            rowsHTML = `${rowsHTML}<div row="${rowIndex}" class="row ${rowIndex % 2 ? "odd" : "even"}">${rowHTML}</div>`;
+            headerHTML += createRowHeaderCell(this.rows[rowIndex]);
+            ++rowIndex;
+        }
+        this.leftHeader.insertAdjacentHTML("beforeend", headerHTML);
+        this.sheet.insertAdjacentHTML("beforeend", rowsHTML);
+        this.bottomIndex = rowIndex;
+    }
+
     enterLeft(leftIndex, visibleLeft) {
         let column, headerHTML = "";
         while ((column = this.columns[--leftIndex]) && (column.left + column.width) >= visibleLeft) {
@@ -477,25 +497,6 @@ export class SleekGrid extends HTMLElement {
             }
             this.rightIndex = rightIndex;
         }
-    }
-
-    enterBottom(visibleBottom) {
-        const {rows, columns} = this;
-        let rowIndex = this.bottomIndex;
-        let headerHTML = "", rowsHTML = "";
-        let row;
-        while ((row = rows[rowIndex]) && (row.top < visibleBottom)) {
-            let rowHTML = "";
-            for (let columnIndex = this.leftIndex; columnIndex < this.rightIndex; columnIndex++) {
-                rowHTML += createCell(columns[columnIndex], row);
-            }
-            rowsHTML = `${rowsHTML}<div row="${rowIndex}" class="row ${rowIndex % 2 ? "odd" : "even"}">${rowHTML}</div>`;
-            headerHTML += createRowHeaderCell(this.rows[rowIndex]);
-            ++rowIndex;
-        }
-        this.leftHeader.insertAdjacentHTML("beforeend", headerHTML);
-        this.sheet.insertAdjacentHTML("beforeend", rowsHTML);
-        this.bottomIndex = rowIndex;
     }
 
     /**

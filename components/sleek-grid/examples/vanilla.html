@@ -9,7 +9,7 @@
             box-sizing: border-box;
             margin: 0;
             width: 100vw;
-            height: 100vh;
+            height: 50vh;
             font-size: 13px;
             font-family: sans-serif;
             background-color: cornflowerblue;
@@ -64,12 +64,16 @@
             return `<span class="text">${row[column.name]}</span>`
         }
 
-        grid.data = {columns, rows: data};
+        grid.data = {columns:columns.slice(0, columns.length), rows: data};
 
-        // setTimeout(()=>grid.scrollTo(0,1000), 50);
-        // setTimeout(()=>grid.scrollTo(500,1000), 100);
-        // setTimeout(()=>grid.scrollTo(500,2000), 150);
-        // setTimeout(()=>grid.scrollTo(0,3000), 200);
+        window.demo = () => {
+            let top = 1000;
+            requestAnimationFrame(function redraw() {
+                grid.scrollTo(0,top += 1000);
+                if (top <= 31000) requestAnimationFrame(redraw);
+            });
+        };
+
     });
 
 </script>
