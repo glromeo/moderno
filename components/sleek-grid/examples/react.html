@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Virtualized Grid</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style type="text/css">
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            font-size: 13px;
+            font-family: sans-serif;
+            background-color: cornflowerblue;
+        }
+
+        #root {
+            box-sizing: border-box;
+            width: 100%;
+            height: 100%;
+            box-shadow: 4px 4px 24px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    <script type="module" src="https://unpkg.com/construct-style-sheets-polyfill" async></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body style="padding: 48px;">
+<div id="root"></div>
+<script type="module" src="../lib/index.js"></script>
+<script type="text/babel">
+
+    const {useRef, useEffect} = React;
+
+    fetch("./MOCK_DATA.json").then(async function (result) {
+
+        const data = await result.json();
+
+        const columns = [
+            {label: "ID", name: "id"},
+            {label: "First Name", name: "first_name"},
+            {label: "Last Name", name: "last_name"},
+            {label: "Email", name: "email"},
+            {label: "Gender", name: "gender"},
+            {label: "IP Address", name: "ip_address"},
+            {label: "Buzzword", name: "buzzword"},
+            {label: "Pet", name: "pet"},
+            {label: "City", name: "city"},
+            {label: "Car_make", name: "car_make"},
+            {label: "Car VIN", name: "car_vin"},
+            {label: "Color", name: "color"},
+            {label: "Product", name: "product"},
+            {label: "Company", name: "company"},
+            {label: "Wealth", name: "wealth"},
+            {label: "Race", name: "race"},
+            {label: "Plant", name: "plant"},
+            {label: "Postcode", name: "postcode"},
+            {label: "Phone Number", name: "phone_number"},
+            {label: "Address", name: "address"},
+            {label: "IBAN", name: "iban"},
+        ];
+
+        data.forEach((row, index) => {
+            row.label = index;
+            row.height = 32 + Math.floor(Math.random() * 10); /* variable row height */
+        });
+
+        function SleekGrid({columns, rows, autosize}) {
+            const ref = useRef(null);
+            useEffect(() => {
+                let grid = ref.current;
+                grid.data = {columns, rows};
+                grid.autosize = autosize;
+            }, [columns, rows])
+            return <sleek-grid ref={ref}/>;
+        }
+
+        ReactDOM.render(
+            <SleekGrid autosize="quick" columns={columns} rows={data}/>,
+            document.getElementById('root')
+        );
+    });
+
+</script>
+</body>
+</html>

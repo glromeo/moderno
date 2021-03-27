@@ -6,20 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style type="text/css">
         body {
+            box-sizing: border-box;
             margin: 0;
             width: 100vw;
             height: 100vh;
             font-size: 13px;
             font-family: sans-serif;
+            background-color: cornflowerblue;
         }
     </style>
-    <script type="module" src="https://unpkg.com/construct-style-sheets-polyfill"></script>
+    <script type="module" src="https://unpkg.com/construct-style-sheets-polyfill" async></script>
 </head>
-<body>
-<virtualized-grid></virtualized-grid>
-<script type="module" src="virtualized-grid.js"></script>
+<body style="padding: 48px;">
+<sleek-grid></sleek-grid>
+<script type="module" src="../lib/index.js"></script>
 <script type="module">
-    let grid = document.querySelector("virtualized-grid");
+
+    window.grid = document.querySelector("sleek-grid");
 
     fetch("./MOCK_DATA.json").then(async function (result) {
 
