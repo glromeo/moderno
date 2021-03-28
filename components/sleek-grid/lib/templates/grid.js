@@ -11,8 +11,8 @@ export const cloneGridTemplate = createTemplate(`
     <div id="scroll-area">
         <div id="stub" class="header">
             <div class="cell">
-                <div class="handle actionable" column="-1"></div>
-                <div class="handle actionable" row="-1"></div>
+                <div class="handle" column="-1"></div>
+                <div class="handle" row="-1"></div>
                 <div class="text" style="visibility: hidden">999</div>
             </div>
             <div class="overflow right"></div>

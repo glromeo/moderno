@@ -9,15 +9,15 @@
             box-sizing: border-box;
             margin: 0;
             width: 100vw;
-            height: 50vh;
+            height: 100vh;
             font-size: 13px;
             font-family: sans-serif;
             background-color: cornflowerblue;
         }
     </style>
-    <script type="module" src="https://unpkg.com/construct-style-sheets-polyfill" async></script>
+    <script type="module" src="https://unpkg.com/construct-style-sheets-polyfill"></script>
 </head>
-<body style="padding: 48px;">
+<body style="padding: 8px;">
 <sleek-grid></sleek-grid>
 <script type="module" src="../lib/index.js"></script>
 <script type="module">
@@ -32,27 +32,27 @@
         // number -> index in array row
 
         const columns = [
-            {label:"Id", name: "id", width: 150},
-            {label:"First_name", name: "first_name", width: 150},
-            {label:"Last_name", name: "last_name", width: 150},
-            {label:"Email", name: "email", width: 150},
-            {label:"Gender", name: "gender", width: 150},
-            {label:"Ip_address", name: "ip_address", width: 150},
-            {label:"Buzzword", name: "buzzword", width: 150},
-            {label:"Pet", name: "pet", width: 150},
-            {label:"City", name: "city", width: 150},
-            {label:"Car_make", name: "car_make", width: 150},
-            {label:"Car_vin", name: "car_vin", width: 150},
-            {label:"Color", name: "color", width: 150},
-            {label:"Product", name: "product", width: 150},
-            {label:"Company", name: "company", width: 150},
-            {label:"Wealth", name: "wealth", width: 150},
-            {label:"Race", name: "race", width: 150},
-            {label:"Plant", name: "plant", width: 150},
-            {label:"Postcode", name: "postcode", width: 150},
-            {label:"Phone_number", name: "phone_number", width: 150},
-            {label:"Address", name: "address", width: 150},
-            {label:"Iban", name: "iban", width: 150},
+            {label: "Id", name: "id", width: 150},
+            {label: "First_name", name: "first_name", width: 150},
+            {label: "Last_name", name: "last_name", width: 150},
+            {label: "Email", name: "email", width: 150},
+            {label: "Gender", name: "gender", width: 150},
+            {label: "Ip_address", name: "ip_address", width: 150},
+            {label: "Buzzword", name: "buzzword", width: 150},
+            {label: "Pet", name: "pet", width: 150},
+            {label: "City", name: "city", width: 150},
+            {label: "Car_make", name: "car_make", width: 150},
+            {label: "Car_vin", name: "car_vin", width: 150},
+            {label: "Color", name: "color", width: 150},
+            {label: "Product", name: "product", width: 150},
+            {label: "Company", name: "company", width: 150},
+            {label: "Wealth", name: "wealth", width: 150},
+            {label: "Race", name: "race", width: 150},
+            {label: "Plant", name: "plant", width: 150},
+            {label: "Postcode", name: "postcode", width: 150},
+            {label: "Phone_number", name: "phone_number", width: 150},
+            {label: "Address", name: "address", width: 150},
+            {label: "Iban", name: "iban", width: 150},
         ];
 
         data.forEach((row, index) => {
@@ -64,16 +64,18 @@
             return `<span class="text">${row[column.name]}</span>`
         }
 
-        grid.data = {columns:columns.slice(0, columns.length), rows: data};
+        grid.data = {columns: columns.slice(0, columns.length), rows: data};
 
         window.demo = () => {
             let top = 1000;
-            requestAnimationFrame(function redraw() {
-                grid.scrollTo(0,top += 1000);
-                if (top <= 31000) requestAnimationFrame(redraw);
+            requestAnimationFrame(function redraw(timestamp) {
+                console.log("demo", timestamp);
+                grid.scrollTo(0, (top += 1000) % 31000);
+                if (top <= 124000) requestAnimationFrame(redraw);
             });
         };
 
+        demo();
     });
 
 </script>

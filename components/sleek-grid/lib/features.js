@@ -36,9 +36,33 @@ SleekGrid.prototype.theme = function (theme) {
     }
 }
 
-SleekGrid.prototype.columnHeaderCallback = function (cellElement, column, index) {
+const configureTopHeaderCell = SleekGrid.prototype.configureTopHeaderCell;
 
-    cellElement.querySelector(".sort-icon").addEventListener("click", (event) => {
+SleekGrid.prototype.configureTopHeaderCell = function (headerCell, column, columnIndex) {
+
+    configureTopHeaderCell.call(this, headerCell, column, columnIndex);
+
+    const searchInput = headerCell.lastElementChild.firstElementChild;
+    const searchLabel = searchInput.nextElementSibling.nextElementSibling;
+    const sortIcon = searchLabel.firstElementChild;
+    const searchIcon = searchLabel.nextElementSibling;
+
+    let focused;
+    searchInput.addEventListener("focus", () => focused = true);
+    searchInput.addEventListener("blur", () => focused = false);
+    searchInput.addEventListener("input", () => {
+        column.search = searchInput.value;
+        this.filter();
+    });
+
+    searchLabel.addEventListener("click", (event) => {
+        const {extentOffset, anchorOffset, focusNode} = this.shadowRoot.getSelection();
+        if (extentOffset === anchorOffset || focusNode.parentNode !== event.target) {
+            searchInput.focus();
+        }
+    }, false);
+
+    sortIcon.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
         const sort = toggleSort(column);
@@ -46,36 +70,20 @@ SleekGrid.prototype.columnHeaderCallback = function (cellElement, column, index)
             active.removeAttribute("sort");
         }
         if (sort) {
-            cellElement.setAttribute("sort", sort);
+            headerCell.setAttribute("sort", sort);
         }
         this.sort();
     }, true);
 
-    cellElement.querySelector(".search-icon").addEventListener("mousedown", (event) => {
+    searchIcon.addEventListener("mousedown", (event) => {
         if (focused) {
             event.target.focus();
         } else {
             event.preventDefault();
             event.stopPropagation();
-            input.focus();
+            searchInput.focus();
         }
     }, true);
-
-    const input = cellElement.querySelector(".search-input");
-    let focused;
-    input.addEventListener("focus", () => focused = true);
-    input.addEventListener("blur", () => focused = false);
-    input.addEventListener("input", () => {
-        column.search = input.value;
-        this.filter();
-    });
-
-    cellElement.querySelector(".search-label").addEventListener("click", (event) => {
-        const {extentOffset, anchorOffset, focusNode} = this.shadowRoot.getSelection();
-        if (extentOffset === anchorOffset || focusNode.parentNode !== event.target) {
-            input.focus();
-        }
-    }, false);
 
 }
 

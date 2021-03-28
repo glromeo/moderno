@@ -46,6 +46,11 @@ export class SleekGrid extends HTMLElement {
         this.leftHeader = this.shadowRoot.getElementById("left-header");
         this.sheet = this.shadowRoot.getElementById("sheet");
 
+        let handle = this.stub.firstElementChild.firstElementChild;
+        handle.addEventListener("mousedown", createDragHandler(this.headerWidthResizeCallback.bind(this)));
+        handle = handle.nextElementSibling;
+        handle.addEventListener("mousedown", createDragHandler(this.headerHeightResizeCallback.bind(this)));
+
         this.properties = {
             rows: [],
             columns: [],
@@ -56,8 +61,6 @@ export class SleekGrid extends HTMLElement {
         this.rows = [];
         this.columns = [];
 
-        this.headerWidthResizeCallback = createDragHandler(this.headerWidthResizeCallback.bind(this));
-        this.headerHeightResizeCallback = createDragHandler(this.headerHeightResizeCallback.bind(this));
         this.columnResizeCallback = createDragHandler(this.columnResizeCallback.bind(this));
         this.rowResizeCallback = createDragHandler(this.rowResizeCallback.bind(this));
         this.columnFitCallback = createCapturingHandler(this.columnFitCallback.bind(this));
@@ -193,13 +196,13 @@ export class SleekGrid extends HTMLElement {
             this.resizeScrollAreaWidth(columns);
             const viewPortLeft = scrollLeft - H_SCROLL_BUFFER_PX;
             const viewPortRight = scrollLeft + clientWidth + H_SCROLL_BUFFER_PX;
-            this.renderColumnHeaders(columns, viewPortLeft, viewPortRight);
+            this.renderTopHeader(columns, viewPortLeft, viewPortRight);
         }
         if (rows !== this.rows) {
             this.resizeScrollAreaHeight(rows);
             const viewPortTop = scrollTop - V_SCROLL_BUFFER_PX;
             const viewPortBottom = scrollTop + clientHeight + V_SCROLL_BUFFER_PX;
-            this.renderRowHeaders(rows, viewPortTop, viewPortBottom);
+            this.renderLeftHeader(rows, viewPortTop, viewPortBottom);
         }
         if (columns !== this.columns || rows !== this.rows) {
             this.renderSheet(columns, rows);
@@ -220,27 +223,52 @@ export class SleekGrid extends HTMLElement {
         this.refreshViewPort(viewPort);
     }
 
-    renderColumnHeaders(columns, viewPortLeft, viewPortRight) {
+    renderTopHeader(columns, viewPortLeft, viewPortRight) {
         const [leftIndex, rightIndex] = visibleRange(columns, "left", "width", viewPortLeft, viewPortRight);
         let innerHTML = "";
         for (const column of columns.slice(leftIndex, rightIndex)) {
             innerHTML += createColumnHeaderCell(column);
         }
         this.topHeader.innerHTML = innerHTML;
-        this.addEventListeners(columns);
+        let headerCell = this.topHeader.firstElementChild, columnIndex = leftIndex;
+        while (headerCell) {
+            this.configureTopHeaderCell(headerCell, columns[columnIndex], columnIndex++);
+            headerCell = headerCell.nextElementSibling;
+        }
         this.leftIndex = leftIndex;
         this.rightIndex = rightIndex;
     }
 
-    renderRowHeaders(rows, viewPortTop, viewPortBottom) {
+    configureTopHeaderCell(headerCell, column, columnIndex) {
+        const handle = headerCell.firstElementChild;
+        handle.addEventListener("mousedown", this.columnResizeCallback);
+        handle.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        handle.addEventListener("dblclick", this.columnFitCallback, true);
+    }
+
+    renderLeftHeader(rows, viewPortTop, viewPortBottom) {
         const [topIndex, bottomIndex] = visibleRange(rows, "top", "height", viewPortTop, viewPortBottom);
         let innerHTML = "";
         for (const row of rows.slice(topIndex, bottomIndex)) {
             innerHTML += createRowHeaderCell(row);
         }
         this.leftHeader.innerHTML = innerHTML;
+        let headerCell = this.leftHeader.firstElementChild, rowIndex = topIndex;
+        while (headerCell) {
+            this.configureLeftHeaderCell(headerCell, rows[rowIndex], rowIndex++);
+            headerCell = headerCell.nextElementSibling;
+        }
         this.topIndex = topIndex;
         this.bottomIndex = bottomIndex;
+    }
+
+    configureLeftHeaderCell(headerCell, row, rowIndex) {
+        const handle = headerCell.lastElementChild;
+        handle.addEventListener("mousedown", this.rowResizeCallback);
+        return handle;
     }
 
     renderSheet(columns, rows) {
@@ -326,15 +354,12 @@ export class SleekGrid extends HTMLElement {
         // ENTER
         // =========================================================================================================
 
-        let leftIndex = this.leftIndex;
-        let rightIndex = this.rightIndex;
-
         if (horizontalScroll < 0) {
-            this.enterLeft(leftIndex, visibleLeft);
+            this.enterLeft(visibleLeft);
         }
 
         if (horizontalScroll > 0 || horizontalResize > 0) {
-            this.enterRight(rightIndex, visibleRight);
+            this.enterRight(visibleRight);
         }
 
         if (verticalScroll < 0) {
@@ -344,195 +369,185 @@ export class SleekGrid extends HTMLElement {
             this.enterBottom(visibleBottom);
         }
 
-        this.addEventListeners();
         this.updateStyle();
     }
 
     leaveTop(visibleTop) {
         const {leftHeader, sheet, rows} = this;
-        let row;
-        while ((row = rows[this.topIndex]) && (row.top + row.height < visibleTop)) {
-            let headerCell = leftHeader.firstElementChild;
-            if (headerCell) {
-                headerCell.remove();
-                sheet.firstElementChild.remove();
+        let row, topIndex = this.topIndex;
+        while ((row = rows[topIndex]) && (row.top + row.height < visibleTop)) {
+            if (leftHeader.firstElementChild) {
+                leftHeader.removeChild(leftHeader.firstElementChild);
+                sheet.removeChild(sheet.firstElementChild);
             }
-            ++this.topIndex;
+            ++topIndex;
         }
-        if (this.topIndex > this.bottomIndex) {
-            this.bottomIndex = this.topIndex;
+        if (topIndex > this.bottomIndex) {
+            this.bottomIndex = topIndex;
         }
+        this.topIndex = topIndex;
     }
 
     leaveBottom(visibleBottom) {
         const {leftHeader, sheet, rows} = this;
-        let row;
-        while ((row = rows[--this.bottomIndex]) && (row.top > visibleBottom)) {
-            let headerCell = leftHeader.lastElementChild;
-            if (headerCell) {
-                headerCell.remove();
-                sheet.lastElementChild.remove();
+        let row, bottomIndex = this.bottomIndex;
+        while ((row = rows[--bottomIndex]) && (row.top > visibleBottom)) {
+            if (leftHeader.lastElementChild) {
+                leftHeader.removeChild(leftHeader.lastElementChild);
+                sheet.removeChild(sheet.lastElementChild);
             }
         }
-        ++this.bottomIndex;
-        if (this.bottomIndex < this.topIndex) {
-            this.topIndex = this.bottomIndex;
+        if (++bottomIndex < this.topIndex) {
+            this.topIndex = bottomIndex;
         }
+        this.bottomIndex = bottomIndex;
     }
 
     leaveLeft(visibleLeft) {
-        const {topHeader, columns} = this;
-        let column;
-        while ((column = columns[this.leftIndex]) && (column.left + column.width < visibleLeft)) {
-            let headerCell = topHeader.firstElementChild;
-            if (headerCell) {
-                headerCell.remove();
-                let rowElement = this.sheet.firstElementChild;
-                if (rowElement) do {
-                    rowElement.firstElementChild.remove();
-                } while ((rowElement = rowElement.nextElementSibling));
+        const {topHeader, sheet, columns} = this;
+        let column, leftIndex = this.leftIndex;
+        while ((column = columns[leftIndex]) && (column.left + column.width < visibleLeft)) {
+            if (topHeader.firstElementChild) {
+                topHeader.removeChild(topHeader.firstElementChild);
+                let rowElement = sheet.firstElementChild;
+                while (rowElement) {
+                    rowElement.removeChild(rowElement.firstElementChild);
+                    rowElement = rowElement.nextElementSibling;
+                }
             }
-            this.leftIndex++;
+            leftIndex++;
         }
-        if (this.leftIndex > this.rightIndex) {
-            this.rightIndex = this.leftIndex;
+        if (leftIndex > this.rightIndex) {
+            this.rightIndex = leftIndex;
         }
+        this.leftIndex = leftIndex;
     }
 
     leaveRight(visibleRight) {
         const {topHeader, columns} = this;
-        let column;
-        while ((column = columns[--this.rightIndex]) && (column.left > visibleRight)) {
-            let headerCell = topHeader.lastElementChild;
-            if (headerCell) {
-                headerCell.remove();
+        let column, rightIndex = this.rightIndex;
+        while ((column = columns[--rightIndex]) && (column.left > visibleRight)) {
+            if (topHeader.lastElementChild) {
+                topHeader.removeChild(topHeader.lastElementChild);
                 let rowElement = this.sheet.firstElementChild;
-                if (rowElement) do {
-                    rowElement.lastElementChild.remove();
-                } while ((rowElement = rowElement.nextElementSibling));
+                while (rowElement) {
+                    rowElement.removeChild(rowElement.lastElementChild);
+                    rowElement = rowElement.nextElementSibling;
+                }
             }
         }
-        ++this.rightIndex;
-        if (this.rightIndex < this.leftIndex) {
-            this.leftIndex = this.rightIndex;
+        if (++rightIndex < this.leftIndex) {
+            this.leftIndex = rightIndex;
         }
+        this.rightIndex = rightIndex;
     }
 
     enterTop(visibleTop) {
-        const {rows, columns} = this;
-        let rowIndex = this.topIndex;
+        const {rows, columns, leftIndex, rightIndex, leftHeader, sheet} = this;
+        let row, topIndex = this.topIndex;
         let headerHTML = "", rowsHTML = "";
-        let row;
-        while ((row = rows[--rowIndex]) && (row.top + row.height >= visibleTop)) {
+        while ((row = rows[--topIndex]) && (row.top + row.height >= visibleTop)) {
             let rowHTML = "";
-            for (let columnIndex = this.leftIndex; columnIndex < this.rightIndex; columnIndex++) {
+            for (let columnIndex = leftIndex; columnIndex < rightIndex; columnIndex++) {
                 rowHTML += createCell(columns[columnIndex], row);
             }
-            rowsHTML = `<div row="${rowIndex}" class="row ${rowIndex % 2 ? "odd" : "even"}">${rowHTML}</div>${rowsHTML}`;
-            headerHTML = createRowHeaderCell(this.rows[rowIndex]) + headerHTML;
+            rowsHTML = `<div row="${topIndex}" class="row ${topIndex % 2 ? "odd" : "even"}">${rowHTML}</div>` + rowsHTML;
+            headerHTML = createRowHeaderCell(rows[topIndex]) + headerHTML;
         }
-        this.leftHeader.insertAdjacentHTML("afterbegin", headerHTML);
-        this.sheet.insertAdjacentHTML("afterbegin", rowsHTML);
-        this.topIndex = ++rowIndex;
+        if (++topIndex < this.topIndex) {
+            sheet.insertAdjacentHTML("afterbegin", rowsHTML);
+            leftHeader.insertAdjacentHTML("afterbegin", headerHTML);
+            let headerCell = leftHeader.firstElementChild;
+            let rowIndex = topIndex;
+            do {
+                this.configureLeftHeaderCell(headerCell, rows[rowIndex], rowIndex);
+                headerCell = headerCell.nextElementSibling;
+            } while (++rowIndex < this.topIndex);
+            this.topIndex = topIndex;
+        }
     }
 
     enterBottom(visibleBottom) {
-        const {rows, columns} = this;
-        let rowIndex = this.bottomIndex;
+        const {rows, columns, leftIndex, rightIndex, leftHeader, sheet} = this;
+        let row, bottomIndex = this.bottomIndex;
         let headerHTML = "", rowsHTML = "";
-        let row;
-        while ((row = rows[rowIndex]) && (row.top < visibleBottom)) {
+        while ((row = rows[bottomIndex]) && (row.top < visibleBottom)) {
             let rowHTML = "";
-            for (let columnIndex = this.leftIndex; columnIndex < this.rightIndex; columnIndex++) {
+            for (let columnIndex = leftIndex; columnIndex < rightIndex; columnIndex++) {
                 rowHTML += createCell(columns[columnIndex], row);
             }
-            rowsHTML = `${rowsHTML}<div row="${rowIndex}" class="row ${rowIndex % 2 ? "odd" : "even"}">${rowHTML}</div>`;
-            headerHTML += createRowHeaderCell(this.rows[rowIndex]);
-            ++rowIndex;
+            rowsHTML += `<div row="${bottomIndex}" class="row ${bottomIndex % 2 ? "odd" : "even"}">${rowHTML}</div>`;
+            headerHTML += createRowHeaderCell(rows[bottomIndex]);
+            ++bottomIndex;
         }
-        this.leftHeader.insertAdjacentHTML("beforeend", headerHTML);
-        this.sheet.insertAdjacentHTML("beforeend", rowsHTML);
-        this.bottomIndex = rowIndex;
+        if (bottomIndex > this.bottomIndex) {
+            sheet.insertAdjacentHTML("beforeend", rowsHTML);
+            leftHeader.insertAdjacentHTML("beforeend", headerHTML);
+            let headerCell = leftHeader.lastElementChild;
+            let rowIndex = bottomIndex - 1;
+            do {
+                this.configureLeftHeaderCell(headerCell, rows[rowIndex], rowIndex);
+                headerCell = headerCell.previousElementSibling;
+            } while (rowIndex-- > this.bottomIndex)
+            this.bottomIndex = bottomIndex;
+        }
     }
 
-    enterLeft(leftIndex, visibleLeft) {
-        let column, headerHTML = "";
-        while ((column = this.columns[--leftIndex]) && (column.left + column.width) >= visibleLeft) {
+    enterLeft(visibleLeft) {
+        const {columns, rows, topIndex, bottomIndex, topHeader, sheet} = this;
+        let column, leftIndex = this.leftIndex;
+        let headerHTML = "";
+        while ((column = columns[--leftIndex]) && (column.left + column.width) >= visibleLeft) {
             headerHTML = createColumnHeaderCell(column) + headerHTML;
         }
-        ++leftIndex;
-        if (headerHTML) {
-            this.topHeader.insertAdjacentHTML("afterbegin", headerHTML);
-            const entered = this.columns.slice(leftIndex, this.leftIndex);
-            let rowElement = this.sheet.firstElementChild;
-            for (let rowIndex = this.topIndex; rowElement && rowIndex < this.bottomIndex; rowIndex++) {
-                let rowHTML = "";
-                for (const column of entered) {
-                    rowHTML += createCell(column, this.rows[rowIndex]);
+        let rightIndex = this.leftIndex;
+        if (++leftIndex < rightIndex) {
+            let rowElement = sheet.firstElementChild;
+            for (let rowIndex = topIndex; rowElement && rowIndex < bottomIndex; rowIndex++) {
+                let rowHTML = "", columnIndex = leftIndex;
+                while (columnIndex < rightIndex) {
+                    rowHTML += createCell(columns[columnIndex++], rows[rowIndex]);
                 }
                 rowElement.insertAdjacentHTML("afterbegin", rowHTML);
                 rowElement = rowElement.nextElementSibling;
+            }
+            topHeader.insertAdjacentHTML("afterbegin", headerHTML);
+            let headerCell = topHeader.firstElementChild;
+            for (let columnIndex = leftIndex; columnIndex < rightIndex; ++columnIndex) {
+                this.configureTopHeaderCell(headerCell, columns[columnIndex], columnIndex);
+                headerCell = headerCell.nextElementSibling;
             }
             this.leftIndex = leftIndex;
         }
     }
 
-    enterRight(rightIndex, visibleRight) {
-        let column, headerHTML = "";
-        while ((column = this.columns[rightIndex]) && column.left <= visibleRight) {
+    enterRight(visibleRight) {
+        const {columns, rows, topIndex, bottomIndex, topHeader, sheet} = this;
+        let column, rightIndex = this.rightIndex;
+        let headerHTML = "";
+        while ((column = columns[rightIndex]) && column.left <= visibleRight) {
             headerHTML += createColumnHeaderCell(column);
             ++rightIndex;
         }
-        if (headerHTML) {
-            this.topHeader.insertAdjacentHTML("beforeend", headerHTML);
-            const entered = this.columns.slice(this.rightIndex, rightIndex);
-            let rowElement = this.sheet.firstElementChild;
-            for (let rowIndex = this.topIndex; rowElement && rowIndex < this.bottomIndex; rowIndex++) {
-                let rowHTML = "";
-                for (const column of entered) {
-                    rowHTML += createCell(column, this.rows[rowIndex]);
+        let leftIndex = this.rightIndex;
+        if (leftIndex < rightIndex) {
+            let rowElement = sheet.firstElementChild;
+            for (let rowIndex = topIndex; rowElement && rowIndex < bottomIndex; rowIndex++) {
+                let rowHTML = "", columnIndex = leftIndex;
+                while (columnIndex < rightIndex) {
+                    rowHTML += createCell(columns[columnIndex++], rows[rowIndex]);
                 }
                 rowElement.insertAdjacentHTML("beforeend", rowHTML);
                 rowElement = rowElement.nextElementSibling;
             }
+            topHeader.insertAdjacentHTML("beforeend", headerHTML);
+            let headerCell = topHeader.lastElementChild;
+            for (let columnIndex = rightIndex-1; columnIndex >= leftIndex; --columnIndex) {
+                this.configureTopHeaderCell(headerCell, columns[columnIndex], columnIndex);
+                headerCell = headerCell.previousElementSibling;
+            }
             this.rightIndex = rightIndex;
         }
-    }
-
-    /**
-     * Adds event listeners to the newly added cells od the grid...
-     */
-    addEventListeners(columns = this.columns) {
-        for (const handle of this.shadowRoot.querySelectorAll("#stub .handle")) {
-            if (handle.hasAttribute("column")) {
-                handle.addEventListener("mousedown", this.headerWidthResizeCallback);
-            } else {
-                const rowIndex = Number(handle.getAttribute("row"));
-                handle.addEventListener("mousedown", this.headerHeightResizeCallback);
-            }
-        }
-        for (const handle of this.shadowRoot.querySelectorAll(".header .handle:not(.actionable)")) {
-            handle.classList.add("actionable");
-            if (handle.hasAttribute("column")) {
-                handle.addEventListener("mousedown", this.columnResizeCallback);
-                handle.addEventListener("click", (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                });
-                handle.addEventListener("dblclick", this.columnFitCallback, true);
-
-                const columnIndex = Number(handle.getAttribute("column"));
-                const column = columns[columnIndex];
-                const cell = handle.parentElement;
-                this.columnHeaderCallback(cell, column, columnIndex);
-            } else {
-                const rowIndex = Number(handle.getAttribute("row"));
-                handle.addEventListener("mousedown", this.rowResizeCallback);
-            }
-        }
-    }
-
-    columnHeaderCallback(cell, column, columnIndex) {
     }
 
     headerWidthResizeCallback({pageX: initialPageX}) {
@@ -660,7 +675,7 @@ export class SleekGrid extends HTMLElement {
         const tx = this.columns[leftIndex].width;
 
         this.viewPort.querySelectorAll(`.c-${leftIndex}`).forEach(cell => cell.classList.add("hidden"));
-        for (let i=leftIndex+1; i<rightIndex; i++) {
+        for (let i = leftIndex + 1; i < rightIndex; i++) {
             this.viewPort.querySelectorAll(`.c-${i}`).forEach(cell => {
                 cell.style.transform = `translate(-${tx}px, 0)`
             });
@@ -670,9 +685,9 @@ export class SleekGrid extends HTMLElement {
         const columns = [
             ...this.columns.slice(0, leftIndex),
             this.columns[rightIndex],
-            ...this.columns.slice(leftIndex+1, rightIndex),
+            ...this.columns.slice(leftIndex + 1, rightIndex),
             this.columns[leftIndex],
-            ...this.columns.slice(rightIndex+1),
+            ...this.columns.slice(rightIndex + 1),
         ];
         this.render(columns, this.rows);
     }
