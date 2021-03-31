@@ -40,6 +40,7 @@ staticStyle.replaceSync(`
     }
     
     #stub > .cell {
+        display: block;
         width: 100%;
         height: 100%;
     }
@@ -71,6 +72,7 @@ staticStyle.replaceSync(`
     }
     
     .cell {
+        display: none;
         position: absolute;
         -webkit-user-select: none;
         user-select: none;

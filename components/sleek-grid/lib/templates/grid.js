@@ -46,7 +46,7 @@ const cloneTopHeaderCell = createTemplate(`
 
 export const createTopHeaderCell = column => {
     const {index, sort, search} = column;
-    const cell = false && topHeaderCache.pop() || cloneTopHeaderCell();
+    const cell = topHeaderCache.pop() || cloneTopHeaderCell();
     cell.className = `cell c-${index}`;
     if (sort) {
         cell.setAttribute("sort", sort);
@@ -79,7 +79,7 @@ const cloneLeftHeaderCellTemplate = createTemplate(`
 
 export const createLeftHeaderCell = row => {
     const {index, label} = row;
-    const cell = false && leftHeaderCache.pop() || cloneLeftHeaderCellTemplate();
+    const cell = leftHeaderCache.pop() || cloneLeftHeaderCellTemplate();
     cell.className = `cell r-${index}`;
     cell.children[0].replaceChildren(label);
     return cell;
@@ -93,7 +93,7 @@ const cloneRowTemplate = createTemplate(`<div class="row"></div>`);
 
 export const createRow = (rows, rowIndex, columns, fromColumn, toColumn) => {
     const row = rows[rowIndex];
-    let popped = false && rowCache.pop();
+    let popped = rowCache.pop();
     if (popped) {
         sheetCellCache.push(...popped.children);
     }
@@ -115,7 +115,7 @@ export const sheetCellCache = [];
 const cloneSheetCellTemplate = createTemplate(`<div class="cell"><div class="text"></div></div>`);
 
 export const createCell = (column, row, classes) => {
-    const cell = false && sheetCellCache.pop() || cloneSheetCellTemplate();
+    const cell = sheetCellCache.pop() || cloneSheetCellTemplate();
     cell.className = `cell c-${column.index} r-${row.index}`;
     if (classes) {
         cell.classList.add(classes)

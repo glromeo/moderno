@@ -20,10 +20,10 @@ export function renderDynamicStyle(grid) {
 `;
 
     for (const {index, left, width} of columns.slice(leftIndex, rightIndex)) {
-        style += `.c-${index}{left:${left}px;width:${width}px}\n`;
+        style += `.c-${index}{display:block;left:${left}px;width:${width}px}\n`;
     }
     for (const {index, top, height} of rows.slice(topIndex, bottomIndex)) {
-        style += `.r-${index}{top:${top}px;height:${height}px}\n`;
+        style += `.r-${index}{display:block;top:${top}px;height:${height}px}\n`;
     }
 
     style += `\

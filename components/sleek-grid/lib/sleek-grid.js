@@ -35,9 +35,6 @@ export class SleekGrid extends HTMLElement {
             dynamicStyle.replaceSync(cssText);
         };
 
-        this.fragment = document.createDocumentFragment();
-        this.headerFragment = document.createDocumentFragment();
-
         this.shadowRoot.appendChild(cloneGridTemplate());
 
         this.stub = this.shadowRoot.getElementById("stub");
@@ -274,10 +271,11 @@ export class SleekGrid extends HTMLElement {
     }
 
     renderSheet(columns, rows) {
+        const children = new Array(this.bottomIndex-this.topIndex);
         for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; ++rowIndex) {
-            this.fragment.appendChild(createRow(rows, rowIndex, columns, this.leftIndex, this.rightIndex));
+            children[rowIndex] = createRow(rows, rowIndex, columns, this.leftIndex, this.rightIndex);
         }
-        this.sheet.replaceChildren(this.fragment);
+        this.sheet.replaceChildren.apply(this.sheet, children);
     }
 
     updateTotalWidth(columns) {
