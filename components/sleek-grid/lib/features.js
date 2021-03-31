@@ -38,9 +38,9 @@ SleekGrid.prototype.theme = function (theme) {
 
 const configureTopHeaderCell = SleekGrid.prototype.configureTopHeaderCell;
 
-SleekGrid.prototype.configureTopHeaderCell = function (headerCell, column, columnIndex) {
+SleekGrid.prototype.configureTopHeaderCell = function (headerCell, column) {
 
-    configureTopHeaderCell.call(this, headerCell, column, columnIndex);
+    configureTopHeaderCell.call(this, headerCell, column);
 
     const searchInput = headerCell.lastElementChild.firstElementChild;
     const searchLabel = searchInput.nextElementSibling.nextElementSibling;
@@ -87,3 +87,10 @@ SleekGrid.prototype.configureTopHeaderCell = function (headerCell, column, colum
 
 }
 
+const updateHeaderHeight = SleekGrid.prototype.updateHeaderDimensions;
+
+SleekGrid.prototype.updateHeaderDimensions = function () {
+    updateHeaderHeight.call(this);
+    const headerPadding = Math.min(8, Math.max(2, 2 + (this.headerHeight - 32) * 6 / 10));
+    this.viewPort.style.setProperty("--header-padding", `${headerPadding}px`);
+}

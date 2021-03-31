@@ -11,27 +11,27 @@ sleekStyle.replaceSync(`
         background-color: var(--background-color);
     }
 
-    #stub > .overflow {
+    #stub-hide-right {
         position: absolute;
         display: block;
         background-color: var(--background-color);
-    }
-    
-    #stub > .overflow.right {
         top: 0;
         width: 3px;
         box-shadow: 1px -3px 3px var(--background-color);
         border-bottom: 1px solid var(--border-color);
     }
     
-    #stub > .overflow.bottom {
+    #stub-hide-bottom {
+        position: absolute;
+        display: block;
+        background-color: var(--background-color);
         left: 0;
         height: 3px;
         box-shadow: -3px 1px 3px var(--background-color);
         border-right: 1px solid var(--border-color);
     }
 
-    #stub .handle[row] {
+    #stub .handle.hz {
         margin-top: -1px; /* because it's the second float */
     }
 
@@ -61,11 +61,11 @@ sleekStyle.replaceSync(`
         background-color: var(--border-color-active);
     }
 
-    .row.even > .cell {
+    .cell.r-even {
         background-color: var(--even-rows-background);
     }
     
-    .row.odd > .cell {
+    .cell.r-odd {
         background-color: var(--odd-rows-background);
     }
 

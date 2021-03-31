@@ -34,7 +34,8 @@ staticStyle.replaceSync(`
         height: 32px;
     }
     
-    #stub > .overflow {
+    #stub-hide-left,
+    #stub-hide-right {
         display: none;
     }
     
@@ -92,20 +93,20 @@ staticStyle.replaceSync(`
         z-index: 200;
     }
     
-    .handle[column] {
+    .handle.vt {
         left: 1px;
         width: 1px;
         margin-left: 2px;
     }
     
-    .handle[column]:hover,
-    .handle[column].active {
+    .handle.vt:hover,
+    .handle.vt.active {
         left: 2px;
         width: 3px;
         margin-left: 0;
     }
     
-    .handle[column]::after {
+    .handle.vt::after {
         width: 9px;
         top: 0;
         bottom: 0;
@@ -113,19 +114,19 @@ staticStyle.replaceSync(`
         cursor: ew-resize;
     }
     
-    .handle[row] {
+    .handle.hz {
         left: 0;
         top: 0;
         height: 1px;
     }
     
-    .handle[row]:hover,
-    .handle[row].active {
+    .handle.hz:hover,
+    .handle.hz.active {
         height: 3px;
         top: -1px;
     }
     
-    .handle[row]::after {
+    .handle.hz::after {
         height: 9px;
         left: 0;
         right: 0;
@@ -133,10 +134,18 @@ staticStyle.replaceSync(`
         cursor: ns-resize;
     }
     
+    .cell.translated {
+        transition: transform 300ms ease-in-out;
+    }
+    
     .cell.hidden {
-        opacity: 0;
         width: 0;
-        transition: opacity 300ms ease-in-out, width 300ms ease-in-out;
+        transition: width 300ms ease-in-out;
+    }
+
+    .cell.hidden .text {
+        opacity: 0;
+        transition: opacity 300ms ease-in-out;
     }
     
 `);

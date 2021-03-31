@@ -1,20 +1,18 @@
 import {renderDynamicStyle} from "./styles/dynamic.js";
 import {sleekStyle} from "./styles/sleek.js";
 import {staticStyle} from "./styles/static.js";
-import {cloneGridTemplate} from "./templates/grid.js";
-import {createCell, createColumnHeaderCell, createRowHeaderCell} from "./templates/headers.js";
 import {
-    createCapturingHandler,
-    createDragHandler,
-    escapeRegex,
-    textWidth,
-    totalColumnWidth,
-    totalRowHeight,
-    visibleRange
-} from "./utility.js";
+    cloneGridTemplate,
+    createCell,
+    createLeftHeaderCell,
+    createRow,
+    createTopHeaderCell, leftHeaderCache, rowCache, sheetCellCache,
+    topHeaderCache
+} from "./templates/grid.js";
+import {createCapturingHandler, createDragHandler, escapeRegex, stripeAt, textWidth, visibleRange} from "./utility.js";
 
-const H_SCROLL_BUFFER_PX = 200;
-const V_SCROLL_BUFFER_PX = 150;
+const H_SCROLL_BUFFER_PX = 300;
+const V_SCROLL_BUFFER_PX = 100;
 
 /**
  * Custom component implementing the Grid
@@ -37,6 +35,9 @@ export class SleekGrid extends HTMLElement {
             dynamicStyle.replaceSync(cssText);
         };
 
+        this.fragment = document.createDocumentFragment();
+        this.headerFragment = document.createDocumentFragment();
+
         this.shadowRoot.appendChild(cloneGridTemplate());
 
         this.stub = this.shadowRoot.getElementById("stub");
@@ -56,6 +57,8 @@ export class SleekGrid extends HTMLElement {
             columns: [],
         }; // keeps a copy of the properties set on the custom element
 
+        this.state = {}
+
         this.pendingUpdates = [];
 
         this.rows = [];
@@ -64,16 +67,28 @@ export class SleekGrid extends HTMLElement {
         this.columnResizeCallback = createDragHandler(this.columnResizeCallback.bind(this));
         this.rowResizeCallback = createDragHandler(this.rowResizeCallback.bind(this));
         this.columnFitCallback = createCapturingHandler(this.columnFitCallback.bind(this));
+
+        this.createLeftHeaderCell = row => {
+            const cell = createLeftHeaderCell(row);
+            this.configureLeftHeaderCell(cell, row);
+            return cell;
+        };
+
+        this.createTopHeaderCell = column => {
+            const cell = createTopHeaderCell(column);
+            this.configureTopHeaderCell(cell, column);
+            return cell;
+        }
     }
 
     set data(data) {
         this.pendingUpdates.push(() => {
             this.properties.columns = data.columns.map((column, index) => {
-                column.index = index;
-                if (column.width === undefined) {
-                    column.width = this.viewPort.clientWidth / data.columns.length;
-                }
-                return column;
+                return {
+                    ...column,
+                    index,
+                    width: column.width ?? this.viewPort.clientWidth / data.columns.length
+                };
             });
             this.properties.rows = data.rows.map((row, index) => {
                 row.index = index;
@@ -83,9 +98,39 @@ export class SleekGrid extends HTMLElement {
         this.requestUpdate();
     }
 
+    connectedCallback() {
+
+        this.updateHeaderDimensions();
+
+        this.theme(this.getAttribute("theme") || "light");
+        this.render(this.columns, this.rows);
+
+        let viewPortScrollListener = () => {
+            cancelAnimationFrame(this.pendingRefresh);
+            this.pendingRefresh = requestAnimationFrame(() => {
+                this.viewPortScrollCallback();
+            });
+        };
+        this.viewPort.addEventListener("scroll", viewPortScrollListener);
+
+        const resizeObserver = new ResizeObserver(([entry]) => {
+            cancelAnimationFrame(this.pendingResize);
+            this.pendingResize = requestAnimationFrame(() => {
+                this.viewPortResizeCallback();
+            });
+        });
+        resizeObserver.observe(this.viewPort);
+
+        this.disconnectedCallback = () => {
+            this.viewPort.removeEventListener("scroll", viewPortScrollListener);
+            resizeObserver.unobserve(this.viewPort);
+            this.disconnectedCallback = undefined;
+        };
+    }
+
     requestUpdate(force) {
-        cancelAnimationFrame(this.requestedAnimationFrame);
-        this.requestedAnimationFrame = requestAnimationFrame(() => {
+        cancelAnimationFrame(this.pendingUpdate);
+        this.pendingUpdate = requestAnimationFrame(() => {
             for (const pendingUpdate of this.pendingUpdates) {
                 pendingUpdate();
             }
@@ -148,58 +193,24 @@ export class SleekGrid extends HTMLElement {
         this.render(columns, rows);
     }
 
-    connectedCallback() {
+    render(columns, rows) {
 
-        this.theme(this.getAttribute("theme") || "light");
-        this.render(this.columns, this.rows, this.viewPort);
-
-        let refreshViewPort = this.refreshViewPort.bind(this, this.viewPort);
-        let pendingRefreshViewport = null;
-        this.viewPort.addEventListener("scroll", () => {
-            cancelAnimationFrame(pendingRefreshViewport);
-            pendingRefreshViewport = requestAnimationFrame(refreshViewPort);
-        });
-
-        let pendingResize;
-        const resizeObserver = new ResizeObserver(([entry]) => {
-            cancelAnimationFrame(pendingResize);
-            pendingResize = requestAnimationFrame(() => {
-                if (this.viewPort.clientWidth !== this.state.clientWidth) {
-                    this.resizeScrollAreaWidth(this.columns);
-                }
-                if (this.viewPort.clientHeight !== this.state.clientHeight) {
-                    this.resizeScrollAreaHeight(this.rows);
-                }
-                this.refreshViewPort();
-            });
-        });
-        resizeObserver.observe(this.viewPort);
-
-        this.disconnectedCallback = () => {
-            this.viewPort.removeEventListener("scroll", refreshViewPort);
-            resizeObserver.unobserve(this.viewPort);
-            this.disconnectedCallback = undefined;
-        };
-    }
-
-    render(columns, rows, viewPort = this.state) {
-
-        console.log("render:", columns.length, rows.length, viewPort);
+        console.log("render:", columns.length, rows.length, this.viewPort);
         const {
             scrollLeft,
             scrollTop,
             clientWidth,
             clientHeight
-        } = viewPort;
+        } = this.viewPort;
 
         if (columns !== this.columns) {
-            this.resizeScrollAreaWidth(columns);
-            const viewPortLeft = scrollLeft - H_SCROLL_BUFFER_PX;
-            const viewPortRight = scrollLeft + clientWidth + H_SCROLL_BUFFER_PX;
+            this.updateTotalWidth(columns);
+            const viewPortLeft = Math.max(0, scrollLeft - H_SCROLL_BUFFER_PX);
+            const viewPortRight = Math.min(scrollLeft + clientWidth + H_SCROLL_BUFFER_PX);
             this.renderTopHeader(columns, viewPortLeft, viewPortRight);
         }
         if (rows !== this.rows) {
-            this.resizeScrollAreaHeight(rows);
+            this.updateTotalHeight(rows);
             const viewPortTop = scrollTop - V_SCROLL_BUFFER_PX;
             const viewPortBottom = scrollTop + clientHeight + V_SCROLL_BUFFER_PX;
             this.renderLeftHeader(rows, viewPortTop, viewPortBottom);
@@ -211,94 +222,83 @@ export class SleekGrid extends HTMLElement {
         this.columns = columns;
         this.rows = rows;
 
-        this.updateStyle();
-
-        this.state = {
+        this.state.viewPort = {
             scrollLeft,
             scrollTop,
             clientWidth,
             clientHeight
         };
 
-        this.refreshViewPort(viewPort);
+        this.updateStyle();
     }
 
     renderTopHeader(columns, viewPortLeft, viewPortRight) {
         const [leftIndex, rightIndex] = visibleRange(columns, "left", "width", viewPortLeft, viewPortRight);
-        let innerHTML = "";
-        for (const column of columns.slice(leftIndex, rightIndex)) {
-            innerHTML += createColumnHeaderCell(column);
-        }
-        this.topHeader.innerHTML = innerHTML;
-        let headerCell = this.topHeader.firstElementChild, columnIndex = leftIndex;
-        while (headerCell) {
-            this.configureTopHeaderCell(headerCell, columns[columnIndex], columnIndex++);
-            headerCell = headerCell.nextElementSibling;
-        }
+        this.topHeader.replaceChildren(...columns
+            .slice(leftIndex, rightIndex)
+            .map(this.createTopHeaderCell)
+        );
         this.leftIndex = leftIndex;
         this.rightIndex = rightIndex;
     }
 
-    configureTopHeaderCell(headerCell, column, columnIndex) {
-        const handle = headerCell.firstElementChild;
-        handle.addEventListener("mousedown", this.columnResizeCallback);
-        handle.addEventListener("click", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-        });
-        handle.addEventListener("dblclick", this.columnFitCallback, true);
+    configureTopHeaderCell(cell, column) {
+        if (!cell.column) {
+            const handle = cell.firstElementChild;
+            handle.addEventListener("mousedown", this.columnResizeCallback);
+            handle.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            handle.addEventListener("dblclick", this.columnFitCallback, true);
+        }
+        cell.column = column;
     }
 
     renderLeftHeader(rows, viewPortTop, viewPortBottom) {
         const [topIndex, bottomIndex] = visibleRange(rows, "top", "height", viewPortTop, viewPortBottom);
-        let innerHTML = "";
-        for (const row of rows.slice(topIndex, bottomIndex)) {
-            innerHTML += createRowHeaderCell(row);
-        }
-        this.leftHeader.innerHTML = innerHTML;
-        let headerCell = this.leftHeader.firstElementChild, rowIndex = topIndex;
-        while (headerCell) {
-            this.configureLeftHeaderCell(headerCell, rows[rowIndex], rowIndex++);
-            headerCell = headerCell.nextElementSibling;
-        }
+        this.leftHeader.replaceChildren(...rows
+            .slice(topIndex, bottomIndex)
+            .map(this.createLeftHeaderCell)
+        );
         this.topIndex = topIndex;
         this.bottomIndex = bottomIndex;
     }
 
-    configureLeftHeaderCell(headerCell, row, rowIndex) {
-        const handle = headerCell.lastElementChild;
-        handle.addEventListener("mousedown", this.rowResizeCallback);
-        return handle;
+    configureLeftHeaderCell(cell, row) {
+        if (!cell.row) {
+            const handle = cell.lastElementChild;
+            handle.addEventListener("mousedown", this.rowResizeCallback);
+        }
+        cell.row = row;
     }
 
     renderSheet(columns, rows) {
-        let innerHTML = "";
-        const visibleColumns = columns.slice(this.leftIndex, this.rightIndex);
         for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; ++rowIndex) {
-            let row = rows[rowIndex];
-            innerHTML += `<div class="row ${rowIndex % 2 ? "odd" : "even"}">`;
-            for (const column of visibleColumns) {
-                innerHTML += createCell(column, row);
-            }
-            innerHTML += `</div>`;
+            this.fragment.appendChild(createRow(rows, rowIndex, columns, this.leftIndex, this.rightIndex));
         }
-        this.sheet.innerHTML = innerHTML;
+        this.sheet.replaceChildren(this.fragment);
     }
 
-    resizeScrollAreaWidth(columns) {
+    updateTotalWidth(columns) {
+        this.totalWidth = 0;
+        for (const column of columns) {
+            column.left = this.totalWidth;
+            this.totalWidth += column.width;
+        }
+    }
+
+    updateTotalHeight(rows) {
+        this.totalHeight = 0;
+        for (const row of rows) {
+            row.top = this.totalHeight;
+            this.totalHeight += row.height;
+        }
+    }
+
+    updateHeaderDimensions() {
         this.headerWidth = this.stub.clientWidth;
-        this.viewPort.style.setProperty("--header-width", `${this.headerWidth}px`);
-        this.totalWidth = columns.reduce(totalColumnWidth, 0);
-        this.scrollArea.style.width = `${this.totalWidth}px`;
-    }
-
-    resizeScrollAreaHeight(rows) {
         this.headerHeight = this.stub.clientHeight;
-        this.viewPort.style.setProperty("--header-height", `${this.headerHeight}px`);
-        const headerPadding = Math.min(8, Math.max(2, 2 + (this.headerHeight - 32) * 6 / 10));
-        this.viewPort.style.setProperty("--header-padding", `${headerPadding}px`);
-        this.totalHeight = rows.reduce(totalRowHeight, 0);
-        this.scrollArea.style.height = `${this.totalHeight}px`;
     }
 
     scrollTo(x, y) {
@@ -308,29 +308,25 @@ export class SleekGrid extends HTMLElement {
     theme(theme) {
     }
 
-    refreshViewPort(viewPort = this.viewPort) {
+    viewPortScrollCallback() {
+        const {clientHeight, clientWidth, scrollLeft, scrollTop} = this.viewPort;
+        const snapshot = this.state.viewPort;
 
-        const state = this.state;
+        const horizontalScroll = scrollLeft - snapshot.scrollLeft;
+        const verticalScroll = scrollTop - snapshot.scrollTop;
 
-        const scrollLeft = viewPort.scrollLeft;
-        const scrollTop = viewPort.scrollTop;
-        const horizontalScroll = scrollLeft - state.scrollLeft;
-        const verticalScroll = scrollTop - state.scrollTop;
-
-        const viewportWidth = viewPort.clientWidth;
-        const viewportHeight = viewPort.clientHeight;
-        const horizontalResize = viewportWidth - state.clientWidth;
-        const verticalResize = viewportHeight - state.clientHeight;
+        const horizontalResize = clientWidth - snapshot.clientWidth;
+        const verticalResize = clientHeight - snapshot.clientHeight;
 
         const visibleLeft = scrollLeft - H_SCROLL_BUFFER_PX;
-        const visibleRight = scrollLeft + viewportWidth + H_SCROLL_BUFFER_PX;
+        const visibleRight = scrollLeft + clientWidth + H_SCROLL_BUFFER_PX;
         const visibleTop = scrollTop - V_SCROLL_BUFFER_PX;
-        const visibleBottom = scrollTop + viewportHeight + V_SCROLL_BUFFER_PX;
+        const visibleBottom = scrollTop + clientHeight + V_SCROLL_BUFFER_PX;
 
-        state.scrollLeft = viewPort.scrollLeft;
-        state.scrollTop = viewPort.scrollTop;
-        state.clientWidth = viewPort.clientWidth;
-        state.clientHeight = viewPort.clientHeight;
+        snapshot.scrollLeft = scrollLeft;
+        snapshot.scrollTop = scrollTop;
+        snapshot.clientWidth = clientWidth;
+        snapshot.clientHeight = clientHeight;
 
         // =========================================================================================================
         // LEAVE
@@ -372,13 +368,44 @@ export class SleekGrid extends HTMLElement {
         this.updateStyle();
     }
 
+    viewPortResizeCallback() {
+
+        const snapshot = this.state.viewPort;
+        const clientWidth = this.viewPort.clientWidth;
+        const clientHeight = this.viewPort.clientHeight;
+        const horizontalResize = clientWidth - snapshot.clientWidth;
+        const verticalResize = clientHeight - snapshot.clientHeight;
+
+        if (horizontalResize) {
+            const visibleRight = snapshot.scrollLeft + clientWidth + H_SCROLL_BUFFER_PX;
+            if (horizontalResize < 0) {
+                this.leaveRight(visibleRight);
+            } else {
+                this.enterRight(visibleRight);
+            }
+            snapshot.clientWidth = clientWidth;
+        }
+
+        if (verticalResize) {
+            const visibleBottom = snapshot.scrollTop + clientHeight + V_SCROLL_BUFFER_PX;
+            if (verticalResize < 0) {
+                this.leaveBottom(visibleBottom);
+            } else {
+                this.enterBottom(visibleBottom);
+            }
+            snapshot.clientHeight = clientHeight;
+        }
+
+        this.updateStyle();
+    }
+
     leaveTop(visibleTop) {
         const {leftHeader, sheet, rows} = this;
         let row, topIndex = this.topIndex;
         while ((row = rows[topIndex]) && (row.top + row.height < visibleTop)) {
             if (leftHeader.firstElementChild) {
-                leftHeader.removeChild(leftHeader.firstElementChild);
-                sheet.removeChild(sheet.firstElementChild);
+                leftHeaderCache.push(leftHeader.removeChild(leftHeader.firstElementChild));
+                rowCache.push(sheet.removeChild(sheet.firstElementChild));
             }
             ++topIndex;
         }
@@ -393,8 +420,8 @@ export class SleekGrid extends HTMLElement {
         let row, bottomIndex = this.bottomIndex;
         while ((row = rows[--bottomIndex]) && (row.top > visibleBottom)) {
             if (leftHeader.lastElementChild) {
-                leftHeader.removeChild(leftHeader.lastElementChild);
-                sheet.removeChild(sheet.lastElementChild);
+                leftHeaderCache.push(leftHeader.removeChild(leftHeader.lastElementChild));
+                rowCache.push(sheet.removeChild(sheet.lastElementChild));
             }
         }
         if (++bottomIndex < this.topIndex) {
@@ -408,10 +435,10 @@ export class SleekGrid extends HTMLElement {
         let column, leftIndex = this.leftIndex;
         while ((column = columns[leftIndex]) && (column.left + column.width < visibleLeft)) {
             if (topHeader.firstElementChild) {
-                topHeader.removeChild(topHeader.firstElementChild);
+                topHeaderCache.push(topHeader.removeChild(topHeader.firstElementChild));
                 let rowElement = sheet.firstElementChild;
                 while (rowElement) {
-                    rowElement.removeChild(rowElement.firstElementChild);
+                    sheetCellCache.push(rowElement.removeChild(rowElement.firstElementChild));
                     rowElement = rowElement.nextElementSibling;
                 }
             }
@@ -428,10 +455,10 @@ export class SleekGrid extends HTMLElement {
         let column, rightIndex = this.rightIndex;
         while ((column = columns[--rightIndex]) && (column.left > visibleRight)) {
             if (topHeader.lastElementChild) {
-                topHeader.removeChild(topHeader.lastElementChild);
+                topHeaderCache.push(topHeader.removeChild(topHeader.lastElementChild));
                 let rowElement = this.sheet.firstElementChild;
                 while (rowElement) {
-                    rowElement.removeChild(rowElement.lastElementChild);
+                    sheetCellCache.push(rowElement.removeChild(rowElement.lastElementChild));
                     rowElement = rowElement.nextElementSibling;
                 }
             }
@@ -445,109 +472,51 @@ export class SleekGrid extends HTMLElement {
     enterTop(visibleTop) {
         const {rows, columns, leftIndex, rightIndex, leftHeader, sheet} = this;
         let row, topIndex = this.topIndex;
-        let headerHTML = "", rowsHTML = "";
         while ((row = rows[--topIndex]) && (row.top + row.height >= visibleTop)) {
-            let rowHTML = "";
-            for (let columnIndex = leftIndex; columnIndex < rightIndex; columnIndex++) {
-                rowHTML += createCell(columns[columnIndex], row);
-            }
-            rowsHTML = `<div row="${topIndex}" class="row ${topIndex % 2 ? "odd" : "even"}">${rowHTML}</div>` + rowsHTML;
-            headerHTML = createRowHeaderCell(rows[topIndex]) + headerHTML;
+            sheet.prepend(createRow(rows, topIndex, columns, leftIndex, rightIndex));
+            leftHeader.prepend(this.createLeftHeaderCell(rows[topIndex]));
         }
-        if (++topIndex < this.topIndex) {
-            sheet.insertAdjacentHTML("afterbegin", rowsHTML);
-            leftHeader.insertAdjacentHTML("afterbegin", headerHTML);
-            let headerCell = leftHeader.firstElementChild;
-            let rowIndex = topIndex;
-            do {
-                this.configureLeftHeaderCell(headerCell, rows[rowIndex], rowIndex);
-                headerCell = headerCell.nextElementSibling;
-            } while (++rowIndex < this.topIndex);
-            this.topIndex = topIndex;
-        }
+        this.topIndex = ++topIndex;
     }
 
     enterBottom(visibleBottom) {
         const {rows, columns, leftIndex, rightIndex, leftHeader, sheet} = this;
         let row, bottomIndex = this.bottomIndex;
-        let headerHTML = "", rowsHTML = "";
         while ((row = rows[bottomIndex]) && (row.top < visibleBottom)) {
-            let rowHTML = "";
-            for (let columnIndex = leftIndex; columnIndex < rightIndex; columnIndex++) {
-                rowHTML += createCell(columns[columnIndex], row);
-            }
-            rowsHTML += `<div row="${bottomIndex}" class="row ${bottomIndex % 2 ? "odd" : "even"}">${rowHTML}</div>`;
-            headerHTML += createRowHeaderCell(rows[bottomIndex]);
+            sheet.append(createRow(rows, bottomIndex, columns, leftIndex, rightIndex));
+            leftHeader.append(this.createLeftHeaderCell(rows[bottomIndex]));
             ++bottomIndex;
         }
-        if (bottomIndex > this.bottomIndex) {
-            sheet.insertAdjacentHTML("beforeend", rowsHTML);
-            leftHeader.insertAdjacentHTML("beforeend", headerHTML);
-            let headerCell = leftHeader.lastElementChild;
-            let rowIndex = bottomIndex - 1;
-            do {
-                this.configureLeftHeaderCell(headerCell, rows[rowIndex], rowIndex);
-                headerCell = headerCell.previousElementSibling;
-            } while (rowIndex-- > this.bottomIndex)
-            this.bottomIndex = bottomIndex;
-        }
+        this.bottomIndex = bottomIndex;
     }
 
     enterLeft(visibleLeft) {
         const {columns, rows, topIndex, bottomIndex, topHeader, sheet} = this;
         let column, leftIndex = this.leftIndex;
-        let headerHTML = "";
         while ((column = columns[--leftIndex]) && (column.left + column.width) >= visibleLeft) {
-            headerHTML = createColumnHeaderCell(column) + headerHTML;
-        }
-        let rightIndex = this.leftIndex;
-        if (++leftIndex < rightIndex) {
+            topHeader.prepend(this.createTopHeaderCell(column));
             let rowElement = sheet.firstElementChild;
             for (let rowIndex = topIndex; rowElement && rowIndex < bottomIndex; rowIndex++) {
-                let rowHTML = "", columnIndex = leftIndex;
-                while (columnIndex < rightIndex) {
-                    rowHTML += createCell(columns[columnIndex++], rows[rowIndex]);
-                }
-                rowElement.insertAdjacentHTML("afterbegin", rowHTML);
+                rowElement.prepend(createCell(column, rows[rowIndex], stripeAt(rowIndex)));
                 rowElement = rowElement.nextElementSibling;
             }
-            topHeader.insertAdjacentHTML("afterbegin", headerHTML);
-            let headerCell = topHeader.firstElementChild;
-            for (let columnIndex = leftIndex; columnIndex < rightIndex; ++columnIndex) {
-                this.configureTopHeaderCell(headerCell, columns[columnIndex], columnIndex);
-                headerCell = headerCell.nextElementSibling;
-            }
-            this.leftIndex = leftIndex;
         }
+        this.leftIndex = ++leftIndex;
     }
 
     enterRight(visibleRight) {
         const {columns, rows, topIndex, bottomIndex, topHeader, sheet} = this;
         let column, rightIndex = this.rightIndex;
-        let headerHTML = "";
         while ((column = columns[rightIndex]) && column.left <= visibleRight) {
-            headerHTML += createColumnHeaderCell(column);
-            ++rightIndex;
-        }
-        let leftIndex = this.rightIndex;
-        if (leftIndex < rightIndex) {
+            topHeader.append(this.createTopHeaderCell(column));
             let rowElement = sheet.firstElementChild;
             for (let rowIndex = topIndex; rowElement && rowIndex < bottomIndex; rowIndex++) {
-                let rowHTML = "", columnIndex = leftIndex;
-                while (columnIndex < rightIndex) {
-                    rowHTML += createCell(columns[columnIndex++], rows[rowIndex]);
-                }
-                rowElement.insertAdjacentHTML("beforeend", rowHTML);
+                rowElement.append(createCell(column, rows[rowIndex], stripeAt(rowIndex)));
                 rowElement = rowElement.nextElementSibling;
             }
-            topHeader.insertAdjacentHTML("beforeend", headerHTML);
-            let headerCell = topHeader.lastElementChild;
-            for (let columnIndex = rightIndex-1; columnIndex >= leftIndex; --columnIndex) {
-                this.configureTopHeaderCell(headerCell, columns[columnIndex], columnIndex);
-                headerCell = headerCell.previousElementSibling;
-            }
-            this.rightIndex = rightIndex;
+            ++rightIndex;
         }
+        this.rightIndex = rightIndex;
     }
 
     headerWidthResizeCallback({pageX: initialPageX}) {
@@ -557,9 +526,8 @@ export class SleekGrid extends HTMLElement {
             let width = initialWidth + pageX - initialPageX;
             let delta = width - this.headerWidth;
             if (Math.abs(delta) > 3) {
-                this.headerWidth = width;
                 cell.style.width = `${width}px`;
-                this.resizeScrollAreaWidth(this.columns);
+                this.updateHeaderDimensions();
                 this.updateStyle();
             }
         }
@@ -572,9 +540,8 @@ export class SleekGrid extends HTMLElement {
             let height = initialHeight + pageY - initialPageY;
             let delta = height - this.headerHeight;
             if (Math.abs(delta) > 3) {
-                this.headerHeight = height;
                 cell.style.height = `${height}px`;
-                this.resizeScrollAreaHeight(this.rows);
+                this.updateHeaderDimensions();
                 this.updateStyle();
             }
         }
@@ -582,10 +549,9 @@ export class SleekGrid extends HTMLElement {
 
     columnResizeCallback({pageX: initialPageX}, handle) {
 
-        const columnIndex = Number(handle.getAttribute("column"));
-        const column = this.columns[columnIndex];
-        const initialWidth = column.width;
         const cell = handle.parentElement;
+        const column = cell.column;
+        const initialWidth = column.width;
 
         return ({pageX}) => {
             let width = initialWidth + pageX - initialPageX;
@@ -601,8 +567,9 @@ export class SleekGrid extends HTMLElement {
             if (Math.abs(delta) > 3) {
                 column.width = width;
                 cell.style.width = `${width}px`;
-                for (let c = columnIndex + 1; c < this.rightIndex; c++) {
-                    this.columns[c].left += delta;
+                let next = cell;
+                while ((next = next.nextElementSibling)) {
+                    next.column.left += delta;
                 }
                 this.updateStyle();
             }
@@ -610,10 +577,9 @@ export class SleekGrid extends HTMLElement {
     }
 
     rowResizeCallback({pageY: initialPageY}, handle) {
-        const rowIndex = Number(handle.getAttribute("row"));
-        const row = this.rows[rowIndex];
-        const initialHeight = this.headerHeight;
         const cell = handle.parentElement;
+        const row = cell.row;
+        const initialHeight = this.headerHeight;
         return ({pageY}) => {
             let height = initialHeight + pageY - initialPageY;
             if (row.maxHeight !== undefined) {
@@ -628,8 +594,9 @@ export class SleekGrid extends HTMLElement {
             if (Math.abs(delta) > 3) {
                 row.height = height;
                 cell.style.height = `${height}px`;
-                for (let r = rowIndex + 1; r < this.bottomIndex; r++) {
-                    this.rows[r].top += delta;
+                let next = cell;
+                while ((next = next.nextElementSibling)) {
+                    next.row.top += delta;
                 }
                 this.updateStyle();
             }
@@ -646,9 +613,8 @@ export class SleekGrid extends HTMLElement {
         sizer.style.cssText = `z-index: 1000;background: red; left:0; top: 0; position: absolute; width: unset; height: unset;`;
         this.sheet.prepend(sizer);
 
-        const columnIndex = Number(handle.getAttribute("column"));
-        const column = this.columns[columnIndex];
         const cell = handle.parentElement;
+        const column = cell.column;
 
         let width = 0;
         for (const row of this.rows) {
@@ -658,8 +624,9 @@ export class SleekGrid extends HTMLElement {
         let delta = width - cell.clientWidth - 1;
         if (Math.abs(delta) > 3) {
             column.width = width;
-            for (let c = columnIndex + 1; c < this.rightIndex; c++) {
-                this.columns[c].left += delta;
+            let next = cell;
+            while ((next = next.nextElementSibling)) {
+                next.column.left += delta;
             }
             this.updateStyle();
         }
@@ -673,22 +640,115 @@ export class SleekGrid extends HTMLElement {
     swap(leftIndex, rightIndex) {
 
         const tx = this.columns[leftIndex].width;
+        this.columns[leftIndex].hidden = true;
 
-        this.viewPort.querySelectorAll(`.c-${leftIndex}`).forEach(cell => cell.classList.add("hidden"));
-        for (let i = leftIndex + 1; i < rightIndex; i++) {
+        const columnNodes = this.viewPort.querySelectorAll(`.c-${leftIndex}`);
+        columnNodes.forEach(cell => cell.classList.add("hidden"));
+        for (let i = leftIndex + 1; i < this.columns.length; i++) {
             this.viewPort.querySelectorAll(`.c-${i}`).forEach(cell => {
                 cell.style.transform = `translate(-${tx}px, 0)`
             });
         }
-        return;
 
-        const columns = [
-            ...this.columns.slice(0, leftIndex),
-            this.columns[rightIndex],
-            ...this.columns.slice(leftIndex + 1, rightIndex),
-            this.columns[leftIndex],
-            ...this.columns.slice(rightIndex + 1),
-        ];
-        this.render(columns, this.rows);
+        const nextSiblingCell = columnNodes.item(1).nextElementSibling;
+        nextSiblingCell.addEventListener("transitionend", () => {
+            this.columns.splice(leftIndex, 1);
+            this.updateTotalWidth(this.columns);
+            this.viewPortScrollCallback();
+            this.updateStyle();
+        });
+
+        return () => {
+            columnNodes.forEach(cell => cell.classList.remove("hidden"));
+            for (let i = leftIndex + 1; i < this.columns.length; i++) {
+                this.viewPort.querySelectorAll(`.c-${i}`).forEach(cell => {
+                    cell.style.transform = null;
+                });
+            }
+            nextSiblingCell.addEventListener("transitionend", () => {
+                this.columns.splice(leftIndex, 1);
+                this.updateTotalWidth(this.columns);
+                this.viewPortScrollCallback();
+                this.updateStyle();
+            });
+        }
     }
+
+    deleteColumn(columnIndex) {
+        const {index, width: horizontalShift} = this.columns[columnIndex];
+
+        const nodeColumn = this.viewPort.querySelectorAll(`.c-${index}`);
+
+        this.enterRight(this.viewPort.scrollLeft + this.viewPort.clientWidth + H_SCROLL_BUFFER_PX + horizontalShift);
+
+        nodeColumn.forEach(cell => {
+            cell.classList.add("hidden");
+            while ((cell = cell.nextElementSibling)) {
+                cell.classList.add("translated");
+                cell.style.transform = `translate(-${horizontalShift}px, 0)`;
+            }
+        });
+
+        setTimeout(() => {
+            this.columns.splice(columnIndex, 1);
+            this.rightIndex--;
+            this.updateTotalWidth(this.columns);
+            this.updateStyle();
+            nodeColumn.forEach(cell => {
+                let sibling = cell.nextElementSibling;
+                while (sibling) {
+                    sibling.classList.remove("translated");
+                    sibling.style.transform = null;
+                    sibling = sibling.nextElementSibling
+                }
+            });
+        }, 500); // keep this in synch with the transition!
+    }
+
+    detachColumn(columnIndex) {
+        const {index, width: horizontalShift} = this.columns[columnIndex];
+        const nodeColumn = this.viewPort.querySelectorAll(`.c-${index}`);
+
+        let slice = cloneVerticalSliceTemplate();
+        slice.firstElementChild.lastElementChild.lastElementChild.replaceChildren(...nodeColumn);
+        slice.firstElementChild.lastElementChild.firstElementChild.append(nodeColumn[0]);
+        this.shadowRoot.appendChild(slice);
+    }
+
+    insertColumn(index, column = this.properties.columns[index]) {
+        let headerSiblingCell = this.topHeader.querySelector(`.c-${index + 1}`);
+
+        for (let i = this.columns.length - 1; i >= index; i--) {
+            this.viewPort.querySelectorAll(`.c-${i}`).forEach(cell => {
+                cell.classList.remove(`c-${i}`);
+                cell.classList.add(`c-${i + 1}`);
+            });
+        }
+
+        this.columns.splice(index, 0, {...column});
+
+        this.columns.forEach((column, index) => column.index = index);
+
+        let innerHTML = createTopHeaderCell(column);
+        this.rows.slice(this.topIndex, this.bottomIndex).forEach((row, index) => {
+            innerHTML += createCell(column, row, stripeAt(this.topIndex + index));
+        });
+        let template = document.createElement("div");
+        template.innerHTML = innerHTML;
+        if (headerSiblingCell) {
+            this.topHeader.insertBefore(template.firstElementChild, headerSiblingCell);
+            this.sheet.querySelectorAll(`.c-${index + 1}`).forEach(cell => {
+                cell.parentElement.insertBefore(template.firstElementChild, cell);
+            });
+        } else {
+            this.topHeader.appendChild(template.firstElementChild);
+            this.sheet.querySelectorAll(`.row`).forEach(row => {
+                row.appendChild(template.firstElementChild);
+            });
+        }
+        this.updateTotalWidth(this.columns);
+        this.viewPortScrollCallback();
+        this.updateStyle();
+    }
+
 }
