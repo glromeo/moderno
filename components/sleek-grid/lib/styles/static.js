@@ -3,10 +3,13 @@ export const staticStyle = new CSSStyleSheet();
 staticStyle.replaceSync(`
 
     :host {
+        --header-width: 50px;
+        --header-height: 32px;
         display: contents;
     }
     
-    :host(.busy) {
+    :host(.busy) *,
+    :host(.busy) *::after {
         cursor: progress !important;
     }
     
@@ -20,18 +23,14 @@ staticStyle.replaceSync(`
         overflow: auto;
     }
     
-    #scroll-area {
-        position: relative;
-    }
-    
     #stub {
         position: sticky;
         float: left;
         z-index: 30;
         left: 0;
         top: 0;
-        width: 50px;
-        height: 32px;
+        width: var(--header-width);
+        height: var(--header-height);
     }
     
     #stub-hide-left,
@@ -40,46 +39,68 @@ staticStyle.replaceSync(`
     }
     
     #stub > .cell {
-        display: block;
         width: 100%;
         height: 100%;
+    }
+    
+    #stub-hide-right {
+        left: var(--header-width);
+        height: var(--header-height);
+    }
+    
+    #stub-hide-bottom {
+        top: var(--header-height);
+        width: var(--header-width);
+    }
+    
+    #scroll-area {
+        position: relative;
     }
     
     #top-header {
         position: sticky;
         top: 0;
-        width: calc(100% - 2px);
         z-index: 10;
+        margin-left: var(--header-width);
+        width: calc(100% - 2px);
+        height: var(--header-height);
     }
     
-    #top-header > .cell {
-        height: 100%;
+    .ch {
+        
     }
     
     #left-header {
         position: sticky;
+        float: left;
         left: 0;
+        width: var(--header-width);
+        height: calc(100% - 2px);
         z-index: 10;
     }
     
-    #left-header > .cell {
+    .rh {
         text-align: center;
         width: 100%;
     }
     
-    #sheet {
-        position: absolute;
+    #sheet{
+        position: relative;
+        left: var(--header-width);
     }
     
     .cell {
-        display: none;
+        display: inline-block;
         position: absolute;
         -webkit-user-select: none;
         user-select: none;
+        height: 100%;
     }
     
     .row {
-        display: contents;
+        position: absolute;
+        white-space: nowrap;
+        width: 100%;
     }
     
     .handle {
@@ -95,20 +116,21 @@ staticStyle.replaceSync(`
         z-index: 200;
     }
     
-    .handle.vt {
+    .width-handle {
         left: 1px;
         width: 1px;
+        height: 100%;
         margin-left: 2px;
     }
     
-    .handle.vt:hover,
-    .handle.vt.active {
+    .width-handle:hover,
+    .width-handle.active {
         left: 2px;
         width: 3px;
         margin-left: 0;
     }
     
-    .handle.vt::after {
+    .width-handle::after {
         width: 9px;
         top: 0;
         bottom: 0;
@@ -116,19 +138,20 @@ staticStyle.replaceSync(`
         cursor: ew-resize;
     }
     
-    .handle.hz {
+    .height-handle {
         left: 0;
         top: 0;
         height: 1px;
+        width: 100%;
     }
     
-    .handle.hz:hover,
-    .handle.hz.active {
+    .height-handle:hover,
+    .height-handle.active {
         height: 3px;
         top: -1px;
     }
     
-    .handle.hz::after {
+    .height-handle::after {
         height: 9px;
         left: 0;
         right: 0;
@@ -136,7 +159,7 @@ staticStyle.replaceSync(`
         cursor: ns-resize;
     }
     
-    .cell.translated {
+    .animate .row {
         transition: transform 300ms ease-in-out;
     }
     
@@ -145,7 +168,7 @@ staticStyle.replaceSync(`
         transition: width 300ms ease-in-out;
     }
 
-    .cell.hidden .text {
+    .hidden .cell-text {
         opacity: 0;
         transition: opacity 300ms ease-in-out;
     }

@@ -1,18 +1,20 @@
-import {renderDynamicStyle} from "./styles/dynamic.js";
 import {sleekStyle} from "./styles/sleek.js";
 import {staticStyle} from "./styles/static.js";
 import {
+    cellsRecycle,
+    cloneCell,
+    cloneColumnHeader,
     cloneGridTemplate,
-    createCell,
-    createLeftHeaderCell,
-    createRow,
-    createTopHeaderCell, leftHeaderCache, rowCache, sheetCellCache,
-    topHeaderCache
-} from "./templates/grid.js";
-import {createCapturingHandler, createDragHandler, escapeRegex, stripeAt, textWidth, visibleRange} from "./utility.js";
+    cloneRow,
+    cloneRowHeader,
+    columnHeadersRecycle,
+    rowHeadersRecycle,
+    rowsRecycle,
+} from "./templates.js";
+import {importColumns, importRows, sourceCode, textWidth} from "./utility.mjs";
+import {ViewPortRange} from "./view-port.mjs";
 
-const H_SCROLL_BUFFER_PX = 300;
-const V_SCROLL_BUFFER_PX = 100;
+let gridId = 0;
 
 /**
  * Custom component implementing the Grid
@@ -22,18 +24,12 @@ export class SleekGrid extends HTMLElement {
     constructor() {
         super();
 
-        const dynamicStyle = new CSSStyleSheet();
+        this.setAttribute("grid-id", gridId);
 
         this.attachShadow({mode: "open"}).adoptedStyleSheets = [
             staticStyle,
-            sleekStyle,
-            dynamicStyle
+            sleekStyle
         ];
-
-        this.updateStyle = () => {
-            const cssText = renderDynamicStyle(this);
-            dynamicStyle.replaceSync(cssText);
-        };
 
         this.shadowRoot.appendChild(cloneGridTemplate());
 
@@ -44,709 +40,441 @@ export class SleekGrid extends HTMLElement {
         this.leftHeader = this.shadowRoot.getElementById("left-header");
         this.sheet = this.shadowRoot.getElementById("sheet");
 
-        let handle = this.stub.firstElementChild.firstElementChild;
-        handle.addEventListener("mousedown", createDragHandler(this.headerWidthResizeCallback.bind(this)));
-        handle = handle.nextElementSibling;
-        handle.addEventListener("mousedown", createDragHandler(this.headerHeightResizeCallback.bind(this)));
+        const refresh = this.refresh.bind(this);
+        this.resizeObserver = new ResizeObserver(refresh);
+        this.resizeObserver.observe(this.viewPort);
+        this.viewPort.addEventListener("scroll", refresh, {passive: true});
 
         this.properties = {
             rows: [],
             columns: [],
         }; // keeps a copy of the properties set on the custom element
 
-        this.state = {}
-
-        this.pendingUpdates = [];
-
+        this.autosize = "quick";
         this.rows = [];
         this.columns = [];
 
-        this.columnResizeCallback = createDragHandler(this.columnResizeCallback.bind(this));
-        this.rowResizeCallback = createDragHandler(this.rowResizeCallback.bind(this));
-        this.columnFitCallback = createCapturingHandler(this.columnFitCallback.bind(this));
+        this.features = {};
 
-        this.createLeftHeaderCell = row => {
-            const cell = createLeftHeaderCell(row);
-            this.configureLeftHeaderCell(cell, row);
-            return cell;
-        };
+        this.createdCallback();
 
-        this.createTopHeaderCell = column => {
-            const cell = createTopHeaderCell(column);
-            this.configureTopHeaderCell(cell, column);
-            return cell;
+        let pendingUpdate;
+        this.requestUpdate = (properties = this.properties) => {
+            cancelAnimationFrame(pendingUpdate);
+            pendingUpdate = requestAnimationFrame(() => {
+                properties = {...this.properties, ...properties};
+                this.render(properties);
+                this.properties = properties;
+            });
         }
     }
 
     set data(data) {
-        this.pendingUpdates.push(() => {
-            this.properties.columns = data.columns.map((column, index) => {
-                return {
-                    ...column,
-                    index,
-                    width: column.width ?? this.viewPort.clientWidth / data.columns.length
-                };
-            });
-            this.properties.rows = data.rows.map((row, index) => {
-                row.index = index;
-                return row;
-            });
-        })
-        this.requestUpdate();
+        this.requestUpdate(data);
     }
+
+    // =========================================================================================================
+    // PROPERTIES
+    // =========================================================================================================
+
+    createdCallback() {
+    }
+
+    // =========================================================================================================
+    // MOUNT/UNMOUNT
+    // =========================================================================================================
 
     connectedCallback() {
-
-        this.updateHeaderDimensions();
-
-        this.theme(this.getAttribute("theme") || "light");
-        this.render(this.columns, this.rows);
-
-        let viewPortScrollListener = () => {
-            cancelAnimationFrame(this.pendingRefresh);
-            this.pendingRefresh = requestAnimationFrame(() => {
-                this.viewPortScrollCallback();
-            });
-        };
-        this.viewPort.addEventListener("scroll", viewPortScrollListener);
-
-        const resizeObserver = new ResizeObserver(([entry]) => {
-            cancelAnimationFrame(this.pendingResize);
-            this.pendingResize = requestAnimationFrame(() => {
-                this.viewPortResizeCallback();
-            });
-        });
-        resizeObserver.observe(this.viewPort);
-
-        this.disconnectedCallback = () => {
-            this.viewPort.removeEventListener("scroll", viewPortScrollListener);
-            resizeObserver.unobserve(this.viewPort);
-            this.disconnectedCallback = undefined;
-        };
+        const {columns, rows} = this.properties;
+        this.render({columns: [...columns], rows: [...rows]});
     }
 
-    requestUpdate(force) {
-        cancelAnimationFrame(this.pendingUpdate);
-        this.pendingUpdate = requestAnimationFrame(() => {
-            for (const pendingUpdate of this.pendingUpdates) {
-                pendingUpdate();
-            }
-            const changed = new Map([
-                ["columns", this.properties.columns],
-                ["rows", this.properties.rows]
-            ]);
-            for (const [property, value] of changed) {
-                if (this[property] === value) changed.delete(property);
-            }
-            console.log("changed properties:", changed, this.properties);
-            this.updated(changed, force);
-            this.pendingUpdates.length = 0;
-        });
+    disconnectedCallback() {
     }
 
-    updated(changed, force) {
-        if (changed.has("columns") || changed.has("rows")) {
-            const columns = changed.get("columns");
-            const rows = changed.get("rows");
-            if (this.autosize === "quick") {
-                for (const column of columns) {
-                    const labelWidth = textWidth(column.label);
-                    column.width = labelWidth;
-                    for (const row of rows) {
-                        column.width += textWidth(row[column.name]);
-                    }
-                    column.width = Math.max(column.width / (rows.length + 1), labelWidth + 32);
-                    column.left = undefined;
-                }
-            }
-            this.filter(columns, rows);
-        } else {
-            if (force) this.render();
-        }
-    }
+    // =========================================================================================================
+    // RENDERING
+    // =========================================================================================================
 
-    filter(columns = this.properties.columns, rows = this.properties.rows) {
-        const filters = columns.filter(column => column.search).map(column => {
-            const regExp = new RegExp(escapeRegex(column.search), "i");
-            return row => regExp.test(row[column.name]);
-        });
-
-        rows = rows.filter(row => filters.every(f => f(row)));
-        this.sort(columns, rows);
-    }
-
-    sort(columns = this.columns, rows = this.rows) {
-        let column = columns.find(column => column.sort);
-        if (column) {
-            const {name, sort} = column;
-            const sortValue = sort === "asc" ? 1 : -1;
-            rows = [...rows];
-            rows = rows.sort(function (leftRow, rightRow) {
-                const leftCell = leftRow[name];
-                const rightCell = rightRow[name];
-                return leftCell === rightCell ? 0 : leftCell < rightCell ? -sortValue : sortValue;
-            });
-        }
-        this.render(columns, rows);
-    }
-
-    render(columns, rows) {
-
-        console.log("render:", columns.length, rows.length, this.viewPort);
-        const {
-            scrollLeft,
-            scrollTop,
-            clientWidth,
-            clientHeight
-        } = this.viewPort;
+    render({columns, rows}) {
 
         if (columns !== this.columns) {
-            this.updateTotalWidth(columns);
-            const viewPortLeft = Math.max(0, scrollLeft - H_SCROLL_BUFFER_PX);
-            const viewPortRight = Math.min(scrollLeft + clientWidth + H_SCROLL_BUFFER_PX);
-            this.renderTopHeader(columns, viewPortLeft, viewPortRight);
+            this.columns = importColumns(columns, this.columnWidthFunction(columns, rows));
+            const {left, width} = this.columns[this.columns.length - 1] || {left: 0, width: 0};
+            this.scrollArea.style.width = `${left + width}px`;
         }
+
         if (rows !== this.rows) {
-            this.updateTotalHeight(rows);
-            const viewPortTop = scrollTop - V_SCROLL_BUFFER_PX;
-            const viewPortBottom = scrollTop + clientHeight + V_SCROLL_BUFFER_PX;
-            this.renderLeftHeader(rows, viewPortTop, viewPortBottom);
-        }
-        if (columns !== this.columns || rows !== this.rows) {
-            this.renderSheet(columns, rows);
+            this.rows = importRows(rows, this.rowHeightFunction(columns, rows));
+            const {top, height} = this.rows[this.rows.length - 1] || {top: 0, height: 0};
+            this.scrollArea.style.height = `${top + height}px`;
         }
 
-        this.columns = columns;
-        this.rows = rows;
+        this.viewPortRange = ViewPortRange(this);
 
-        this.state.viewPort = {
-            scrollLeft,
-            scrollTop,
-            clientWidth,
-            clientHeight
-        };
+        const {
+            topIndex,
+            bottomIndex,
+            leftIndex,
+            rightIndex
+        } = this.viewPortRange.state;
 
-        this.updateStyle();
-    }
+        // console.log("render:", this.columns.length, this.rows.length, {
+        //     topIndex,
+        //     bottomIndex,
+        //     leftIndex,
+        //     rightIndex
+        // }, new Error().stack);
 
-    renderTopHeader(columns, viewPortLeft, viewPortRight) {
-        const [leftIndex, rightIndex] = visibleRange(columns, "left", "width", viewPortLeft, viewPortRight);
-        this.topHeader.replaceChildren(...columns
-            .slice(leftIndex, rightIndex)
-            .map(this.createTopHeaderCell)
-        );
-        this.leftIndex = leftIndex;
-        this.rightIndex = rightIndex;
-    }
-
-    configureTopHeaderCell(cell, column) {
-        if (!cell.column) {
-            const handle = cell.firstElementChild;
-            handle.addEventListener("mousedown", this.columnResizeCallback);
-            handle.addEventListener("click", (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-            });
-            handle.addEventListener("dblclick", this.columnFitCallback, true);
+        let columnIndex = leftIndex, ch = this.topHeader.firstChild;
+        while (ch && columnIndex < rightIndex) {
+            this.createColumnHeader(columnIndex++, ch);
+            ch = ch.nextSibling;
         }
-        cell.column = column;
-    }
-
-    renderLeftHeader(rows, viewPortTop, viewPortBottom) {
-        const [topIndex, bottomIndex] = visibleRange(rows, "top", "height", viewPortTop, viewPortBottom);
-        this.leftHeader.replaceChildren(...rows
-            .slice(topIndex, bottomIndex)
-            .map(this.createLeftHeaderCell)
-        );
-        this.topIndex = topIndex;
-        this.bottomIndex = bottomIndex;
-    }
-
-    configureLeftHeaderCell(cell, row) {
-        if (!cell.row) {
-            const handle = cell.lastElementChild;
-            handle.addEventListener("mousedown", this.rowResizeCallback);
+        if (ch) {
+            let last;
+            do {
+                last = this.topHeader.removeChild(this.topHeader.lastChild);
+            } while (last !== ch);
         }
-        cell.row = row;
-    }
-
-    renderSheet(columns, rows) {
-        const children = new Array(this.bottomIndex-this.topIndex);
-        for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; ++rowIndex) {
-            children[rowIndex] = createRow(rows, rowIndex, columns, this.leftIndex, this.rightIndex);
+        while (columnIndex < rightIndex) {
+            this.topHeader.appendChild(this.createColumnHeader(columnIndex++));
         }
-        this.sheet.replaceChildren.apply(this.sheet, children);
-    }
 
-    updateTotalWidth(columns) {
-        this.totalWidth = 0;
-        for (const column of columns) {
-            column.left = this.totalWidth;
-            this.totalWidth += column.width;
+        let rowIndex = topIndex, rh = this.leftHeader.firstChild, row = this.sheet.firstElementChild;
+        while (rh && rowIndex < bottomIndex) {
+            this.createRow(rowIndex, leftIndex, rightIndex, row);
+            this.createRowHeader(rowIndex++, rh);
+            rh = rh.nextSibling;
+            row = row.nextSibling;
+        }
+        if (rh) {
+            let last;
+            do {
+                this.sheet.removeChild(this.sheet.lastChild);
+                last = this.leftHeader.removeChild(this.leftHeader.lastChild);
+            } while (last !== rh);
+        }
+        while (rowIndex < bottomIndex) {
+            this.sheet.appendChild(this.createRow(rowIndex, leftIndex, rightIndex));
+            this.leftHeader.appendChild(this.createRowHeader(rowIndex++));
         }
     }
 
-    updateTotalHeight(rows) {
-        this.totalHeight = 0;
-        for (const row of rows) {
-            row.top = this.totalHeight;
-            this.totalHeight += row.height;
+    columnWidthFunction(columns, rows) {
+        if (this.autosize === "quick") {
+            return ({label, name}) => {
+                let width = textWidth(label);
+                for (const row of rows) {
+                    width = Math.max(width, textWidth(row[name]));
+                }
+                return (.6 * width) + 32;
+            }
+        } else {
+            const width = this.viewPort.clientWidth / columns.length;
+            return () => width;
         }
     }
 
-    updateHeaderDimensions() {
-        this.headerWidth = this.stub.clientWidth;
-        this.headerHeight = this.stub.clientHeight;
+    rowHeightFunction(columns, rows) {
+        return index => 32;
     }
 
     scrollTo(x, y) {
         this.viewPort.scrollTo(x, y);
     }
 
-    theme(theme) {
-    }
+    refresh() {
 
-    viewPortScrollCallback() {
-        const {clientHeight, clientWidth, scrollLeft, scrollTop} = this.viewPort;
-        const snapshot = this.state.viewPort;
+        const {leftHeader, topHeader, sheet} = this;
 
-        const horizontalScroll = scrollLeft - snapshot.scrollLeft;
-        const verticalScroll = scrollTop - snapshot.scrollTop;
-
-        const horizontalResize = clientWidth - snapshot.clientWidth;
-        const verticalResize = clientHeight - snapshot.clientHeight;
-
-        const visibleLeft = scrollLeft - H_SCROLL_BUFFER_PX;
-        const visibleRight = scrollLeft + clientWidth + H_SCROLL_BUFFER_PX;
-        const visibleTop = scrollTop - V_SCROLL_BUFFER_PX;
-        const visibleBottom = scrollTop + clientHeight + V_SCROLL_BUFFER_PX;
-
-        snapshot.scrollLeft = scrollLeft;
-        snapshot.scrollTop = scrollTop;
-        snapshot.clientWidth = clientWidth;
-        snapshot.clientHeight = clientHeight;
+        let {
+            topIndex,
+            bottomIndex,
+            leftIndex,
+            rightIndex,
+            previous
+        } = this.viewPortRange(this.viewPort);
 
         // =========================================================================================================
         // LEAVE
         // =========================================================================================================
 
-        if (verticalScroll > 0) {
-            this.leaveTop(visibleTop);
+        if (topIndex > previous.topIndex) {
+            this.recycleTop(topIndex - previous.topIndex, leftHeader, sheet);
         }
-        if (verticalScroll < 0 || verticalResize < 0) {
-            this.leaveBottom(visibleBottom);
+        if (bottomIndex < previous.bottomIndex) {
+            this.recycleBottom(previous.bottomIndex - bottomIndex, leftHeader, sheet);
         }
 
-        if (horizontalScroll > 0) {
-            this.leaveLeft(visibleLeft);
+        if (leftIndex > previous.leftIndex) {
+            this.recycleLeft(leftIndex - previous.leftIndex, topHeader, sheet);
         }
-        if (horizontalScroll < 0 || horizontalResize < 0) {
-            this.leaveRight(visibleRight);
+        if (rightIndex < previous.rightIndex) {
+            this.recycleRight(previous.rightIndex - rightIndex, topHeader, sheet);
         }
 
         // =========================================================================================================
         // ENTER
         // =========================================================================================================
 
-        if (horizontalScroll < 0) {
-            this.enterLeft(visibleLeft);
-        }
-
-        if (horizontalScroll > 0 || horizontalResize > 0) {
-            this.enterRight(visibleRight);
-        }
-
-        if (verticalScroll < 0) {
-            this.enterTop(visibleTop);
-        }
-        if (verticalScroll > 0 || verticalResize > 0) {
-            this.enterBottom(visibleBottom);
-        }
-
-        this.updateStyle();
-    }
-
-    viewPortResizeCallback() {
-
-        const snapshot = this.state.viewPort;
-        const clientWidth = this.viewPort.clientWidth;
-        const clientHeight = this.viewPort.clientHeight;
-        const horizontalResize = clientWidth - snapshot.clientWidth;
-        const verticalResize = clientHeight - snapshot.clientHeight;
-
-        if (horizontalResize) {
-            const visibleRight = snapshot.scrollLeft + clientWidth + H_SCROLL_BUFFER_PX;
-            if (horizontalResize < 0) {
-                this.leaveRight(visibleRight);
-            } else {
-                this.enterRight(visibleRight);
-            }
-            snapshot.clientWidth = clientWidth;
-        }
-
-        if (verticalResize) {
-            const visibleBottom = snapshot.scrollTop + clientHeight + V_SCROLL_BUFFER_PX;
-            if (verticalResize < 0) {
-                this.leaveBottom(visibleBottom);
-            } else {
-                this.enterBottom(visibleBottom);
-            }
-            snapshot.clientHeight = clientHeight;
-        }
-
-        this.updateStyle();
-    }
-
-    leaveTop(visibleTop) {
-        const {leftHeader, sheet, rows} = this;
-        let row, topIndex = this.topIndex;
-        while ((row = rows[topIndex]) && (row.top + row.height < visibleTop)) {
-            if (leftHeader.firstElementChild) {
-                leftHeaderCache.push(leftHeader.removeChild(leftHeader.firstElementChild));
-                rowCache.push(sheet.removeChild(sheet.firstElementChild));
-            }
-            ++topIndex;
-        }
-        if (topIndex > this.bottomIndex) {
-            this.bottomIndex = topIndex;
-        }
-        this.topIndex = topIndex;
-    }
-
-    leaveBottom(visibleBottom) {
-        const {leftHeader, sheet, rows} = this;
-        let row, bottomIndex = this.bottomIndex;
-        while ((row = rows[--bottomIndex]) && (row.top > visibleBottom)) {
-            if (leftHeader.lastElementChild) {
-                leftHeaderCache.push(leftHeader.removeChild(leftHeader.lastElementChild));
-                rowCache.push(sheet.removeChild(sheet.lastElementChild));
-            }
-        }
-        if (++bottomIndex < this.topIndex) {
-            this.topIndex = bottomIndex;
-        }
-        this.bottomIndex = bottomIndex;
-    }
-
-    leaveLeft(visibleLeft) {
-        const {topHeader, sheet, columns} = this;
-        let column, leftIndex = this.leftIndex;
-        while ((column = columns[leftIndex]) && (column.left + column.width < visibleLeft)) {
-            if (topHeader.firstElementChild) {
-                topHeaderCache.push(topHeader.removeChild(topHeader.firstElementChild));
-                let rowElement = sheet.firstElementChild;
+        if (leftIndex < previous.leftIndex) {
+            for (let columnIndex = Math.min(previous.leftIndex, rightIndex) - 1; columnIndex >= leftIndex; --columnIndex) {
+                topHeader.prepend(this.createColumnHeader(columnIndex));
+                let rowElement = sheet.firstChild;
+                let rowIndex = topIndex;
                 while (rowElement) {
-                    sheetCellCache.push(rowElement.removeChild(rowElement.firstElementChild));
-                    rowElement = rowElement.nextElementSibling;
+                    rowElement.prepend(this.createCell(columnIndex, rowIndex++));
+                    rowElement = rowElement.nextSibling;
                 }
             }
-            leftIndex++;
         }
-        if (leftIndex > this.rightIndex) {
-            this.rightIndex = leftIndex;
-        }
-        this.leftIndex = leftIndex;
-    }
 
-    leaveRight(visibleRight) {
-        const {topHeader, columns} = this;
-        let column, rightIndex = this.rightIndex;
-        while ((column = columns[--rightIndex]) && (column.left > visibleRight)) {
-            if (topHeader.lastElementChild) {
-                topHeaderCache.push(topHeader.removeChild(topHeader.lastElementChild));
-                let rowElement = this.sheet.firstElementChild;
+        if (rightIndex > previous.rightIndex) {
+            for (let columnIndex = Math.max(previous.rightIndex, leftIndex); columnIndex < rightIndex; ++columnIndex) {
+                topHeader.append(this.createColumnHeader(columnIndex));
+                let rowElement = sheet.firstChild;
+                let rowIndex = topIndex;
                 while (rowElement) {
-                    sheetCellCache.push(rowElement.removeChild(rowElement.lastElementChild));
-                    rowElement = rowElement.nextElementSibling;
+                    rowElement.append(this.createCell(columnIndex, rowIndex++));
+                    rowElement = rowElement.nextSibling;
                 }
             }
         }
-        if (++rightIndex < this.leftIndex) {
-            this.leftIndex = rightIndex;
-        }
-        this.rightIndex = rightIndex;
-    }
 
-    enterTop(visibleTop) {
-        const {rows, columns, leftIndex, rightIndex, leftHeader, sheet} = this;
-        let row, topIndex = this.topIndex;
-        while ((row = rows[--topIndex]) && (row.top + row.height >= visibleTop)) {
-            sheet.prepend(createRow(rows, topIndex, columns, leftIndex, rightIndex));
-            leftHeader.prepend(this.createLeftHeaderCell(rows[topIndex]));
-        }
-        this.topIndex = ++topIndex;
-    }
-
-    enterBottom(visibleBottom) {
-        const {rows, columns, leftIndex, rightIndex, leftHeader, sheet} = this;
-        let row, bottomIndex = this.bottomIndex;
-        while ((row = rows[bottomIndex]) && (row.top < visibleBottom)) {
-            sheet.append(createRow(rows, bottomIndex, columns, leftIndex, rightIndex));
-            leftHeader.append(this.createLeftHeaderCell(rows[bottomIndex]));
-            ++bottomIndex;
-        }
-        this.bottomIndex = bottomIndex;
-    }
-
-    enterLeft(visibleLeft) {
-        const {columns, rows, topIndex, bottomIndex, topHeader, sheet} = this;
-        let column, leftIndex = this.leftIndex;
-        while ((column = columns[--leftIndex]) && (column.left + column.width) >= visibleLeft) {
-            topHeader.prepend(this.createTopHeaderCell(column));
-            let rowElement = sheet.firstElementChild;
-            for (let rowIndex = topIndex; rowElement && rowIndex < bottomIndex; rowIndex++) {
-                rowElement.prepend(createCell(column, rows[rowIndex], stripeAt(rowIndex)));
-                rowElement = rowElement.nextElementSibling;
+        if (topIndex < previous.topIndex) {
+            for (let rowIndex = Math.min(previous.topIndex, bottomIndex) - 1; rowIndex >= topIndex; --rowIndex) {
+                sheet.prepend(this.createRow(rowIndex, leftIndex, rightIndex));
+                leftHeader.prepend(this.createRowHeader(rowIndex));
             }
         }
-        this.leftIndex = ++leftIndex;
-    }
 
-    enterRight(visibleRight) {
-        const {columns, rows, topIndex, bottomIndex, topHeader, sheet} = this;
-        let column, rightIndex = this.rightIndex;
-        while ((column = columns[rightIndex]) && column.left <= visibleRight) {
-            topHeader.append(this.createTopHeaderCell(column));
-            let rowElement = sheet.firstElementChild;
-            for (let rowIndex = topIndex; rowElement && rowIndex < bottomIndex; rowIndex++) {
-                rowElement.append(createCell(column, rows[rowIndex], stripeAt(rowIndex)));
-                rowElement = rowElement.nextElementSibling;
-            }
-            ++rightIndex;
-        }
-        this.rightIndex = rightIndex;
-    }
-
-    headerWidthResizeCallback({pageX: initialPageX}) {
-        const initialWidth = this.headerWidth;
-        const cell = this.stub;
-        return ({pageX}) => {
-            let width = initialWidth + pageX - initialPageX;
-            let delta = width - this.headerWidth;
-            if (Math.abs(delta) > 3) {
-                cell.style.width = `${width}px`;
-                this.updateHeaderDimensions();
-                this.updateStyle();
+        if (bottomIndex > previous.bottomIndex) {
+            for (let rowIndex = Math.max(previous.bottomIndex, topIndex); rowIndex < bottomIndex; ++rowIndex) {
+                sheet.append(this.createRow(rowIndex, leftIndex, rightIndex));
+                leftHeader.append(this.createRowHeader(rowIndex));
             }
         }
     }
 
-    headerHeightResizeCallback({pageY: initialPageY}) {
-        const initialHeight = this.headerHeight;
-        const cell = this.stub;
-        return ({pageY}) => {
-            let height = initialHeight + pageY - initialPageY;
-            let delta = height - this.headerHeight;
-            if (Math.abs(delta) > 3) {
-                cell.style.height = `${height}px`;
-                this.updateHeaderDimensions();
-                this.updateStyle();
-            }
+    createColumnHeader(columnIndex, recycled = columnHeadersRecycle.lastChild) {
+        const {label, left, width, search, sort} = this.columns[columnIndex];
+        const columnHeader = recycled || cloneColumnHeader();
+        const headerContent = columnHeader.childNodes[1];
+        if (columnHeader.index !== columnIndex) {
+            columnHeader.index = columnIndex;
+            columnHeader.className = `ch cell c-${columnIndex}`;
+            columnHeader.style.left = `${left}px`
+            columnHeader.style.width = `${width}px`;
+            const headerLabel = headerContent.childNodes[2];
+            headerLabel.firstChild.replaceWith(label);
         }
-    }
-
-    columnResizeCallback({pageX: initialPageX}, handle) {
-
-        const cell = handle.parentElement;
-        const column = cell.column;
-        const initialWidth = column.width;
-
-        return ({pageX}) => {
-            let width = initialWidth + pageX - initialPageX;
-            if (column.maxWidth !== undefined) {
-                width = Math.min(width, column.maxWidth);
-            }
-            if (column.minWidth !== undefined) {
-                width = Math.max(width, column.minWidth);
+        const headerInput = headerContent.childNodes[0];
+        if (headerInput.value !== search) {
+            headerInput.value = search || "";
+            if (search) {
+                columnHeader.setAttribute("search", search);
             } else {
-                width = Math.max(width, 20);
-            }
-            let delta = width - column.width;
-            if (Math.abs(delta) > 3) {
-                column.width = width;
-                cell.style.width = `${width}px`;
-                let next = cell;
-                while ((next = next.nextElementSibling)) {
-                    next.column.left += delta;
-                }
-                this.updateStyle();
+                columnHeader.removeAttribute("search");
             }
         }
-    }
-
-    rowResizeCallback({pageY: initialPageY}, handle) {
-        const cell = handle.parentElement;
-        const row = cell.row;
-        const initialHeight = this.headerHeight;
-        return ({pageY}) => {
-            let height = initialHeight + pageY - initialPageY;
-            if (row.maxHeight !== undefined) {
-                height = Math.min(height, row.maxHeight);
-            }
-            if (row.minHeight !== undefined) {
-                height = Math.max(height, row.minHeight);
-            } else {
-                height = Math.max(height, 20);
-            }
-            let delta = height - row.height;
-            if (Math.abs(delta) > 3) {
-                row.height = height;
-                cell.style.height = `${height}px`;
-                let next = cell;
-                while ((next = next.nextElementSibling)) {
-                    next.row.top += delta;
-                }
-                this.updateStyle();
-            }
-        }
-    }
-
-    columnFitCallback(event) {
-        const handle = event.target;
-        handle.classList.add("active");
-
-        this.classList.add("busy");
-        let sizer = this.sheet.firstElementChild.firstElementChild.cloneNode(true);
-        let textSizer = sizer.firstElementChild;
-        sizer.style.cssText = `z-index: 1000;background: red; left:0; top: 0; position: absolute; width: unset; height: unset;`;
-        this.sheet.prepend(sizer);
-
-        const cell = handle.parentElement;
-        const column = cell.column;
-
-        let width = 0;
-        for (const row of this.rows) {
-            textSizer.innerText = row[column.name];
-            width = Math.max(width, sizer.clientWidth);
-        }
-        let delta = width - cell.clientWidth - 1;
-        if (Math.abs(delta) > 3) {
-            column.width = width;
-            let next = cell;
-            while ((next = next.nextElementSibling)) {
-                next.column.left += delta;
-            }
-            this.updateStyle();
-        }
-
-        handle.classList.remove("active");
-
-        sizer.remove();
-        this.classList.remove("busy");
-    }
-
-    swap(leftIndex, rightIndex) {
-
-        const tx = this.columns[leftIndex].width;
-        this.columns[leftIndex].hidden = true;
-
-        const columnNodes = this.viewPort.querySelectorAll(`.c-${leftIndex}`);
-        columnNodes.forEach(cell => cell.classList.add("hidden"));
-        for (let i = leftIndex + 1; i < this.columns.length; i++) {
-            this.viewPort.querySelectorAll(`.c-${i}`).forEach(cell => {
-                cell.style.transform = `translate(-${tx}px, 0)`
-            });
-        }
-
-        const nextSiblingCell = columnNodes.item(1).nextElementSibling;
-        nextSiblingCell.addEventListener("transitionend", () => {
-            this.columns.splice(leftIndex, 1);
-            this.updateTotalWidth(this.columns);
-            this.viewPortScrollCallback();
-            this.updateStyle();
-        });
-
-        return () => {
-            columnNodes.forEach(cell => cell.classList.remove("hidden"));
-            for (let i = leftIndex + 1; i < this.columns.length; i++) {
-                this.viewPort.querySelectorAll(`.c-${i}`).forEach(cell => {
-                    cell.style.transform = null;
-                });
-            }
-            nextSiblingCell.addEventListener("transitionend", () => {
-                this.columns.splice(leftIndex, 1);
-                this.updateTotalWidth(this.columns);
-                this.viewPortScrollCallback();
-                this.updateStyle();
-            });
-        }
-    }
-
-    deleteColumn(columnIndex) {
-        const {index, width: horizontalShift} = this.columns[columnIndex];
-
-        const nodeColumn = this.viewPort.querySelectorAll(`.c-${index}`);
-
-        this.enterRight(this.viewPort.scrollLeft + this.viewPort.clientWidth + H_SCROLL_BUFFER_PX + horizontalShift);
-
-        nodeColumn.forEach(cell => {
-            cell.classList.add("hidden");
-            while ((cell = cell.nextElementSibling)) {
-                cell.classList.add("translated");
-                cell.style.transform = `translate(-${horizontalShift}px, 0)`;
-            }
-        });
-
-        setTimeout(() => {
-            this.columns.splice(columnIndex, 1);
-            this.rightIndex--;
-            this.updateTotalWidth(this.columns);
-            this.updateStyle();
-            nodeColumn.forEach(cell => {
-                let sibling = cell.nextElementSibling;
-                while (sibling) {
-                    sibling.classList.remove("translated");
-                    sibling.style.transform = null;
-                    sibling = sibling.nextElementSibling
-                }
-            });
-        }, 500); // keep this in synch with the transition!
-    }
-
-    detachColumn(columnIndex) {
-        const {index, width: horizontalShift} = this.columns[columnIndex];
-        const nodeColumn = this.viewPort.querySelectorAll(`.c-${index}`);
-
-        let slice = cloneVerticalSliceTemplate();
-        slice.firstElementChild.lastElementChild.lastElementChild.replaceChildren(...nodeColumn);
-        slice.firstElementChild.lastElementChild.firstElementChild.append(nodeColumn[0]);
-        this.shadowRoot.appendChild(slice);
-    }
-
-    insertColumn(index, column = this.properties.columns[index]) {
-        let headerSiblingCell = this.topHeader.querySelector(`.c-${index + 1}`);
-
-        for (let i = this.columns.length - 1; i >= index; i--) {
-            this.viewPort.querySelectorAll(`.c-${i}`).forEach(cell => {
-                cell.classList.remove(`c-${i}`);
-                cell.classList.add(`c-${i + 1}`);
-            });
-        }
-
-        this.columns.splice(index, 0, {...column});
-
-        this.columns.forEach((column, index) => column.index = index);
-
-        let innerHTML = createTopHeaderCell(column);
-        this.rows.slice(this.topIndex, this.bottomIndex).forEach((row, index) => {
-            innerHTML += createCell(column, row, stripeAt(this.topIndex + index));
-        });
-        let template = document.createElement("div");
-        template.innerHTML = innerHTML;
-        if (headerSiblingCell) {
-            this.topHeader.insertBefore(template.firstElementChild, headerSiblingCell);
-            this.sheet.querySelectorAll(`.c-${index + 1}`).forEach(cell => {
-                cell.parentElement.insertBefore(template.firstElementChild, cell);
-            });
+        if (sort) {
+            columnHeader.setAttribute("sort", sort);
         } else {
-            this.topHeader.appendChild(template.firstElementChild);
-            this.sheet.querySelectorAll(`.row`).forEach(row => {
-                row.appendChild(template.firstElementChild);
-            });
+            columnHeader.removeAttribute("sort");
         }
-        this.updateTotalWidth(this.columns);
-        this.viewPortScrollCallback();
-        this.updateStyle();
+        if (!recycled) {
+            this.columnHeaderCallback(columnHeader);
+        }
+        return columnHeader;
     }
 
+    columnHeaderCallback(columnHeader) {
+    }
+
+    // TODO: filter breaks index alignment
+
+    columnContext(event) {
+        const header = event.target.closest(".ch");
+        const index = header.index;
+        const column = this.columns[index];
+        return {
+            header,
+            column,
+            index
+        }
+    }
+
+    createRowHeader(rowIndex, recycled = rowHeadersRecycle.lastChild) {
+        const {label, top, height} = this.rows[rowIndex];
+        const rowHeader = recycled || cloneRowHeader();
+        if (rowHeader.index !== rowIndex) {
+            rowHeader.index = rowIndex;
+            rowHeader.className = `rh cell r-${rowHeader.index}`;
+            rowHeader.style.top = `${top}px`;
+            rowHeader.style.height = `${height}px`;
+        }
+        rowHeader.firstChild.replaceChildren(label ?? "n/a");
+        if (!recycled) {
+            this.rowHeaderCallback(rowHeader);
+        }
+        return rowHeader;
+    }
+
+    rowHeaderCallback(rowHeader) {
+    }
+
+    createCell(columnIndex, rowIndex, recycled = cellsRecycle.lastChild) {
+        const {columns, rows} = this;
+        const {name, left, width} = columns[columnIndex];
+        const content = rows[rowIndex][name];
+        const cellElement = recycled || cloneCell();
+        cellElement.className = `cell c-${columnIndex} r-${rowIndex}`;
+        cellElement.style.left = `${left}px`
+        cellElement.style.width = `${width}px`;
+        cellElement.firstChild.replaceChildren(content ?? "");
+        return cellElement;
+    }
+
+    createRow(rowIndex, leftIndex, rightIndex, recycled = rowsRecycle.lastChild) {
+        const row = recycled || cloneRow();
+        if (row.index !== rowIndex) {
+            const {top, height} = this.rows[rowIndex];
+            if (rowIndex % 2) {
+                row.classList.replace("even", "odd");
+            } else {
+                row.classList.replace("odd", "even");
+            }
+            row.setAttribute("row", rowIndex);
+            row.style.transform = `translateY(${top}px)`;
+            row.style.height = `${height}px`;
+            row.index = rowIndex;
+        }
+
+        let columnIndex = leftIndex;
+        let recycledCell = row.firstChild;
+        if (recycledCell) {
+            while (recycledCell && columnIndex < rightIndex) {
+                this.createCell(columnIndex++, rowIndex, recycledCell);
+                recycledCell = recycledCell.nextSibling;
+            }
+            if (recycledCell) do {
+                cellsRecycle.appendChild(row.lastChild);
+            } while (cellsRecycle.lastChild !== recycledCell);
+        }
+        while (columnIndex < rightIndex) {
+            row.appendChild(this.createCell(columnIndex++, rowIndex));
+        }
+        return row;
+    }
+
+    recycleTop(count, rowHeaders, sheet) {
+        const headerNodes = rowHeaders.childNodes;
+        const sheetNodes = sheet.childNodes;
+        if (count < headerNodes.length && count > 0) {
+            rowHeadersRecycle.append(...Array.prototype.slice.call(headerNodes, 0, count));
+            rowsRecycle.append(...Array.prototype.slice.call(sheetNodes, 0, count));
+        } else {
+            rowHeadersRecycle.append(...headerNodes);
+            rowsRecycle.append(...sheetNodes);
+        }
+    }
+
+    recycleBottom(count, rowHeaders, sheet) {
+        const headerNodes = rowHeaders.childNodes;
+        const sheetNodes = sheet.childNodes;
+        if (count < headerNodes.length && count > 0) {
+            rowHeadersRecycle.append(...Array.prototype.slice.call(headerNodes, headerNodes.length - count));
+            rowsRecycle.append(...Array.prototype.slice.call(sheetNodes, sheetNodes.length - count));
+        } else {
+            rowHeadersRecycle.append(...headerNodes);
+            rowsRecycle.append(...sheetNodes);
+        }
+    }
+
+    recycleLeft(count, columnHeaders, sheet) {
+        if (count < columnHeaders.childNodes.length && count > 0) {
+            do {
+                columnHeadersRecycle.appendChild(columnHeaders.firstChild);
+                let rowElement = sheet.firstChild;
+                while (rowElement) {
+                    cellsRecycle.appendChild(rowElement.firstChild);
+                    rowElement = rowElement.nextSibling;
+                }
+            } while (--count)
+        } else {
+            columnHeadersRecycle.append(...columnHeaders.childNodes);
+            let nextRow = sheet.firstChild;
+            while (nextRow) {
+                cellsRecycle.append(...nextRow.childNodes);
+                nextRow = nextRow.nextSibling;
+            }
+        }
+    }
+
+    recycleRight(count, columnHeaders, sheet) {
+        if (count < columnHeaders.childNodes.length && count > 0) {
+            do {
+                columnHeadersRecycle.appendChild(columnHeaders.lastChild);
+                let rowElement = sheet.firstChild;
+                while (rowElement) {
+                    cellsRecycle.appendChild(rowElement.lastChild);
+                    rowElement = rowElement.nextSibling;
+                }
+            } while (--count)
+        } else {
+            columnHeadersRecycle.append(...columnHeaders.childNodes);
+            let nextRow = sheet.firstChild;
+            while (nextRow) {
+                cellsRecycle.append(...nextRow.childNodes);
+                nextRow = nextRow.nextSibling;
+            }
+        }
+    }
+}
+
+SleekGrid.features = {
+
+    advices: {},
+
+    validate(advice, name) {
+        if (!name) {
+            throw new Error("A SleekGrid advice must be a named function e.g. function createdCallback() {...}");
+        }
+        if (!SleekGrid.prototype.hasOwnProperty(name)) {
+            throw new Error(`Not a SleekGrid feature: ${name}`);
+        }
+        if (typeof SleekGrid.prototype[name] !== "function") {
+            throw new Error(`Not a valid SleekGrid feature: ${name}\n`);
+        }
+    },
+
+    before(name, factory) {
+        const advices = this.advices[name] || (this.advices[name] = [SleekGrid.prototype[name]]);
+        if (advices.length === 1) SleekGrid.prototype[name] = function before() {
+            let next = advices.shift();
+            let factory = advices.shift();
+            while (factory) {
+                next = factory(next.bind(this))
+                factory = advices.shift();
+            }
+            SleekGrid.prototype[name] = next;
+            next.apply(this, arguments);
+        }
+        advices.push(factory);
+    },
+
+    after(advice) {
+        const name = advice.name;
+        this.validate(advice, name);
+        if (sourceCode(SleekGrid.prototype[name])) {
+            const chain = SleekGrid.prototype[name];
+            SleekGrid.prototype[name] = function after() {
+                chain.apply(this, arguments);
+                advice.apply(this, arguments);
+            }
+        } else {
+            SleekGrid.prototype[name] = advice;
+        }
+    }
 }

@@ -14,7 +14,6 @@
             font-family: sans-serif;
             background-color: cornflowerblue;
         }
-
     </style>
     <script type="module" src="./construct-style-sheets-polyfill.js"></script>
 </head>
@@ -61,22 +60,97 @@
             row.height = 32;
         });
 
+        grid.rowHeight = index => 32;
+
         grid.renderCell = function (column, row) {
             return `<span class="text">${row[column.name]}</span>`
         }
 
         grid.data = {columns: columns.slice(0, columns.length), rows: data};
 
-        window.demo = () => {
-            let top = 1000;
-            requestAnimationFrame(function redraw(timestamp) {
-                console.log("demo", timestamp);
-                grid.scrollTo(0, (top += 1000) % 31000);
-                if (top <= 124000) requestAnimationFrame(redraw);
-            });
-        };
+        let searchParams = new URLSearchParams(window.location.search.slice(1));
+        if (searchParams.has("demo")) {
+            switch (searchParams.get("demo")) {
+                case "r": {
+                    let top = 500, count = 0;
+                    console.time("raf");
+                    requestAnimationFrame(function redraw() {
+                        ++count;
+                        grid.scrollTo(0, (top += 500) % 31000);
+                        if (top <= 62000) {
+                            requestAnimationFrame(redraw);
+                        } else {
+                            console.timeEnd("raf");
+                            console.log("count:", count);
+                        }
+                    });
+                    break;
+                }
+                case "i":
+                    requestAnimationFrame(() => {
+                        let top = 500, count = 0;
+                        console.time("int");
+                        let interval = setInterval(function() {
+                            ++count;
+                            grid.scrollTo(0, (top += 500) % 31000);
+                            if (top > 62000) {
+                                clearInterval(interval);
+                                console.timeEnd("int");
+                                console.log("count:", count);
+                            }
+                        }, 1000 / 60);
+                    });
+                    break;
+                case "i2":
+                    requestAnimationFrame(() => {
+                        let top = 1500, count = 0;
+                        console.time("int");
+                        let interval = setInterval(function() {
+                            ++count;
+                            grid.scrollTo(0, (top += 1500) % 31000);
+                            if (top > 62000) {
+                                clearInterval(interval);
+                                console.timeEnd("int");
+                                console.log("count:", count);
+                            }
+                        }, 1000 / 60);
+                    });
+                    break;
+                case "sr": {
+                    let top = 10, count = 0;
+                    console.time("sr");
+                    requestAnimationFrame(function redraw() {
+                        ++count;
+                        grid.scrollTo(0, top += 10);
+                        if (top <= 1500) {
+                            requestAnimationFrame(redraw);
+                        } else {
+                            console.timeEnd("sr");
+                            console.log("count:", count);
+                        }
+                    });
+                    break;
+                }
+                case "s":
+                    requestAnimationFrame(() => {
+                        let top = 10, count = 0;
+                        console.time("small");
+                        let interval = setInterval(function() {
+                            ++count;
+                            grid.scrollTo(0, top += 10);
+                            if (top > 2000) {
+                                clearInterval(interval);
+                                console.timeEnd("small");
+                                console.log("count:", count);
+                            }
+                        }, 1000 / 60);
+                    });
+                    break;
+                default:
+                    alert("unknown demo: " + searchParams.get("demo"));
+            }
+        }
 
-        demo();
     });
 
 </script>

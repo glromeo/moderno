@@ -61,11 +61,11 @@ sleekStyle.replaceSync(`
         background-color: var(--border-color-active);
     }
 
-    .cell.r-even {
+    .row.even {
         background-color: var(--even-rows-background);
     }
     
-    .cell.r-odd {
+    .row.odd {
         background-color: var(--odd-rows-background);
     }
 
@@ -137,7 +137,7 @@ sleekStyle.replaceSync(`
         border-bottom: 1px solid var(--border-color);
     }
     
-    .cell > .text {
+    .cell-text {
         position: relative;
         -webkit-user-select: text;
         user-select: text;
@@ -148,7 +148,7 @@ sleekStyle.replaceSync(`
         white-space: nowrap;
     }
 
-    .cell > .content {
+    .cell-content {
         position: relative;
         height: 100%;
     }
