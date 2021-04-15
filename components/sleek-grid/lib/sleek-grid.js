@@ -261,14 +261,12 @@ export class SleekGrid extends HTMLElement {
         const {label, left, width, search, sort} = this.columns[columnIndex];
         const columnHeader = recycled || cloneColumnHeader();
         const headerContent = columnHeader.childNodes[1];
-        if (columnHeader.index !== columnIndex) {
-            columnHeader.index = columnIndex;
-            columnHeader.className = `ch cell c-${columnIndex}`;
-            columnHeader.style.left = `${left}px`
-            columnHeader.style.width = `${width}px`;
-            const headerLabel = headerContent.childNodes[2];
-            headerLabel.firstChild.replaceWith(label);
-        }
+        columnHeader.index = columnIndex;
+        columnHeader.className = `ch cell c-${columnIndex}`;
+        columnHeader.style.left = `${left}px`
+        columnHeader.style.width = `${width}px`;
+        const headerLabel = headerContent.childNodes[2];
+        headerLabel.firstChild.replaceWith(label);
         const headerInput = headerContent.childNodes[0];
         if (headerInput.value !== search) {
             headerInput.value = search || "";
@@ -308,12 +306,10 @@ export class SleekGrid extends HTMLElement {
     createRowHeader(rowIndex, recycled = rowHeadersRecycle.lastChild) {
         const {label, top, height} = this.rows[rowIndex];
         const rowHeader = recycled || cloneRowHeader();
-        if (rowHeader.index !== rowIndex) {
-            rowHeader.index = rowIndex;
-            rowHeader.className = `rh cell r-${rowHeader.index}`;
-            rowHeader.style.top = `${top}px`;
-            rowHeader.style.height = `${height}px`;
-        }
+        rowHeader.index = rowIndex;
+        rowHeader.className = `rh cell r-${rowHeader.index}`;
+        rowHeader.style.top = `${top}px`;
+        rowHeader.style.height = `${height}px`;
         rowHeader.firstChild.replaceChildren(label ?? "n/a");
         if (!recycled) {
             this.rowHeaderCallback(rowHeader);
@@ -338,18 +334,16 @@ export class SleekGrid extends HTMLElement {
 
     createRow(rowIndex, leftIndex, rightIndex, recycled = rowsRecycle.lastChild) {
         const row = recycled || cloneRow();
-        if (row.index !== rowIndex) {
-            const {top, height} = this.rows[rowIndex];
-            if (rowIndex % 2) {
-                row.classList.replace("even", "odd");
-            } else {
-                row.classList.replace("odd", "even");
-            }
-            row.setAttribute("row", rowIndex);
-            row.style.transform = `translateY(${top}px)`;
-            row.style.height = `${height}px`;
-            row.index = rowIndex;
+        const {top, height} = this.rows[rowIndex];
+        if (rowIndex % 2) {
+            row.className = "row odd";
+        } else {
+            row.className = "row even";
         }
+        row.setAttribute("row", rowIndex);
+        row.style.transform = `translateY(${top}px)`;
+        row.style.height = `${height}px`;
+        row.index = rowIndex;
 
         let columnIndex = leftIndex;
         let recycledCell = row.firstChild;
