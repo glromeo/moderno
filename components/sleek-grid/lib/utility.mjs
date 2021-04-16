@@ -32,14 +32,18 @@ export function importRows(rows, rowHeight) {
     return imported;
 }
 
-export function createTemplate(innerHTML) {
+export function createTemplate(innerHTML, render) {
     const template = document.createElement("template");
     template.innerHTML = innerHTML.split("\n").map(line => line.trim()).join("");
-    const recycling = document.createDocumentFragment();
-    return [
-        () => template.content.cloneNode(true).firstChild,
-        recycling
-    ];
+    if (render) {
+        return (props) => {
+            const root = template.content.cloneNode(true).firstChild;
+            root.render = render.bind(root, props);
+            return root;
+        };
+    } else {
+        return () => template.content.cloneNode(true).firstChild;
+    }
 }
 
 export function calculateScrollbarDimensions() {

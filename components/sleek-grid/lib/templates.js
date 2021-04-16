@@ -1,5 +1,5 @@
-import {createTemplate} from "./utility.mjs";
 import icons from "./icons.js";
+import {createTemplate} from "./utility.mjs";
 
 /**
  * sheet: it's used to offset (see stub cell) the top left of the cells so that they align with the headers
@@ -7,7 +7,7 @@ import icons from "./icons.js";
  *
  * @type {HTMLTemplateElement}
  */
-export const [cloneGridTemplate] = createTemplate(`
+export const cloneGridTemplate = createTemplate(`
 <div id="view-port">
     <div id="scroll-area">
         <div id="stub" class="header">
@@ -26,7 +26,7 @@ export const [cloneGridTemplate] = createTemplate(`
 </div>
 `);
 
-export const [cloneColumnHeader, columnHeadersRecycle] = createTemplate(`
+export const cloneColumnHeader = createTemplate(`
 <div class="ch cell c-0">
     <div class="handle width-handle"></div>
     <div class="cell-content">
@@ -39,25 +39,84 @@ export const [cloneColumnHeader, columnHeadersRecycle] = createTemplate(`
         <svg class="search-icon" viewBox="0 0 512 512"><path fill="currentColor" d="${icons.search}"></path></svg>
     </div>
 </div>
-`);
+`, function render({columns}, columnIndex) {
+    const {label, left, width, search, sort} = columns[columnIndex];
+    const headerContent = this.childNodes[1];
+    this.index = columnIndex;
+    this.className = `ch cell c-${columnIndex}`;
+    this.style.left = `${left}px`;
+    this.style.width = `${width}px`;
+    const headerLabel = headerContent.childNodes[2];
+    headerLabel.firstChild.replaceWith(label);
+    const headerInput = headerContent.childNodes[0];
+    if (headerInput.value !== search) {
+        headerInput.value = search || "";
+        if (search) {
+            this.setAttribute("search", search);
+        } else {
+            this.removeAttribute("search");
+        }
+    }
+    if (sort) {
+        this.setAttribute("sort", sort);
+    } else {
+        this.removeAttribute("sort");
+    }
+});
 
-export const [cloneRowHeader, rowHeadersRecycle] = createTemplate(`
+export const cloneRowHeader = createTemplate(`
 <div class="rh cell r-0">
     <div class="cell-text" value=""></div>
     <div class="handle height-handle"></div>
 </div>
-`,);
+`, function render({rows}, rowIndex) {
+    const {label, top, height} = rows[rowIndex];
+    this.index = rowIndex;
+    this.className = `rh cell r-${rowIndex}`;
+    this.style.top = `${top}px`;
+    this.style.height = `${height}px`;
+    this.firstChild.replaceChildren(label ?? "n/a");
+});
 
-export const [cloneCell, cellsRecycle] = createTemplate(`
+export const cloneCell = createTemplate(`
 <div class="cell c-0 r-0">
     <div class="cell-text"></div>
 </div>
-`);
+`, function render({columns, rows}, columnIndex, rowIndex) {
+    const {name, left, width} = columns[columnIndex];
+    const content = rows[rowIndex][name];
+    this.className = `cell c-${columnIndex} r-${rowIndex}`;
+    this.style.left = `${left}px`;
+    this.style.width = `${width}px`;
+    this.firstChild.replaceChildren(content ?? "");
+});
 
-export const [cloneRow, rowsRecycle] = createTemplate(`
-<div class="row even" row="0">
-    <div class="cell">
-        <div class="cell-text"></div>
-    </div>
-</div>
-`);
+export const cloneRow = createTemplate(`
+<div class="row even" row="0"></div>
+`, function render(grid, rowIndex, leftIndex, rightIndex) {
+    const {top, height} = grid.rows[rowIndex];
+    this.index = rowIndex;
+    if (rowIndex % 2) {
+        this.className = "row odd";
+    } else {
+        this.className = "row even";
+    }
+    this.setAttribute("row", rowIndex);
+    this.style.transform = `translateY(${top}px)`;
+    this.style.height = `${height}px`;
+
+    let columnIndex = leftIndex;
+    let recycledCell = this.firstChild;
+    if (recycledCell) {
+        while (recycledCell && columnIndex < rightIndex) {
+            recycledCell.render(columnIndex++, rowIndex);
+            recycledCell = recycledCell.nextSibling;
+        }
+        if (recycledCell) do {} while (recycledCell !== this.removeChild(this.lastChild));
+    }
+    while (columnIndex < rightIndex) {
+        const cell = cloneCell(grid);
+        cell.render(columnIndex++, rowIndex);
+        this.appendChild(cell);
+    }
+});
