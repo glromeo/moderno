@@ -1,4 +1,4 @@
-import {SleekGrid} from "../sleek-grid.js";
+import {_ROW_, _ROW_HEADER_, SleekGrid} from "../sleek-grid.js";
 import {createCellSizer, createDragHandler} from "../utility.mjs";
 
 SleekGrid.features.after(function createdCallback() {
@@ -8,7 +8,7 @@ SleekGrid.features.after(function createdCallback() {
         style,
         viewPort,
         stub,
-        leftHeader,
+        rowHeader,
         scrollArea,
         sheet
     } = sleekGrid;
@@ -22,13 +22,13 @@ SleekGrid.features.after(function createdCallback() {
                 stub.style.width = `${width}px`;
                 sleekGrid.updateHeaderWidth(width);
             }
-        }
+        };
     }
 
     sleekGrid.updateHeaderWidth = function (width = stub.clientWidth) {
         const cssWidth = `${width}px`;
         style.setProperty("--header-width", cssWidth);
-    }
+    };
 
     function headerHeightResizeCallback({pageY: initialPageY}) {
         const initialHeight = stub.clientHeight;
@@ -39,7 +39,7 @@ SleekGrid.features.after(function createdCallback() {
                 stub.style.height = `${height}px`;
                 sleekGrid.updateHeaderHeight(height);
             }
-        }
+        };
     }
 
     sleekGrid.updateHeaderHeight = function (height = stub.clientHeight) {
@@ -47,7 +47,7 @@ SleekGrid.features.after(function createdCallback() {
         const padding = Math.min(8, Math.max(2, 2 + (height - 32) * 6 / 10));
         style.setProperty("--header-height", heightPx);
         style.setProperty("--header-padding", `${padding}px`);
-    }
+    };
 
     function columnResizeCallback({pageX: initialPageX}, handle) {
         const {columns} = sleekGrid;
@@ -90,9 +90,9 @@ SleekGrid.features.after(function createdCallback() {
                 for (let nextColumnIndex = columnIndex + 1; nextColumnIndex < columns.length; ++nextColumnIndex) {
                     columns[nextColumnIndex].left += translation;
                 }
-                sleekGrid.viewPortRange.refresh(translation);
+                viewPort.range.resize(translation, 0);
             }
-        }
+        };
     }
 
     function rowResizeCallback({pageY: initialPageY}, handle) {
@@ -116,50 +116,39 @@ SleekGrid.features.after(function createdCallback() {
                 if (Math.abs(delta) > 3) {
                     translation = height - row.height;
 
-                    const cssHeight = `${height}px`;
-                    rowHeaderCell.style.height = cssHeight;
-                    for (const {style} of sheet.querySelectorAll(`.r-${rowIndex}`)) {
-                        style.height = cssHeight;
-                    }
+                    const rowHeightPx = `${height}px`;
+                    row[_ROW_HEADER_].style.height = rowHeightPx;
+                    row[_ROW_].style.height = rowHeightPx;
 
-                    const cssTransform = `translateY(${translation}px)`;
-                    for (const {style} of leftHeader.querySelectorAll(`.r-${rowIndex} ~ .cell`)) {
-                        style.transform = cssTransform;
-                    }
-
-                    let rowElement = sheet.querySelector(`[row="${rowIndex}"]`);
-                    rowElement.style.height = cssHeight;
-                    for (let nextRowIndex = rowIndex + 1; (rowElement = rowElement.nextSibling); nextRowIndex++) {
-                        rowElement.style.transform = `translateY(${rows[nextRowIndex].top + translation}px)`;
+                    let nextIndex = rowIndex, nextRow;
+                    while ((nextRow = rows[++nextIndex]) && nextRow[_ROW_]) {
+                        const transform = `translateY(${nextRow.top + translation}px)`;
+                        nextRow[_ROW_HEADER_].style.transform = transform;
+                        nextRow[_ROW_].style.transform = transform;
                     }
                 }
             } else if (translation !== undefined) {
                 translation = Math.floor(translation);
                 row.height += translation;
 
-                const cssHeight = `${row.height}px`;
-                rowHeaderCell.style.height = cssHeight;
-                for (const {style} of sheet.querySelectorAll(`.r-${rowIndex}`)) {
-                    style.height = cssHeight;
-                }
+                const rowHeightPx = `${row.height}px`;
+                row[_ROW_HEADER_].style.height = rowHeightPx;
+                row[_ROW_].style.height = rowHeightPx;
 
-                for (const {style, offsetTop} of leftHeader.querySelectorAll(`.r-${rowIndex} ~ .cell`)) {
-                    style.top = `${offsetTop + translation}px`;
-                    style.transform = null;
+                let nextIndex = rowIndex + 1, nextRow;
+                while ((nextRow = rows[nextIndex]) && nextRow[_ROW_]) {
+                    nextRow.top += translation;
+                    const transform = `translateY(${nextRow.top}px)`;
+                    nextRow[_ROW_HEADER_].style.transform = transform;
+                    nextRow[_ROW_].style.transform = transform;
+                    ++nextIndex;
                 }
-                let rowElement = sheet.querySelector(`[row="${rowIndex}"]`);
-                rowElement.style.height = cssHeight;
-                let nextRowIndex = rowIndex + 1;
-                while ((rowElement = rowElement.nextSibling)) {
-                    const rowTop = rows[nextRowIndex++].top += translation;
-                    rowElement.style.transform = `translateY(${rowTop}px)`;
+                while (nextIndex < rows.length) {
+                    rows[nextIndex++].top += translation;
                 }
-                while (nextRowIndex < rows.length) {
-                    rows[nextRowIndex++].top += translation;
-                }
-                sleekGrid.viewPortRange.refresh(translation);
+                viewPort.range.resize(0, translation);
             }
-        }
+        };
     }
 
     const sizer = createCellSizer(sleekGrid);
@@ -219,19 +208,19 @@ SleekGrid.features.after(function createdCallback() {
 
         column.width = columnWidth;
 
-        sleekGrid.viewPortRange.refresh(translation);
+        viewPort.range.resize(translation, 0);
     }
 
     function rowFitCallback(event, rowIndex, rowHeight) {
         const {rows} = sleekGrid;
         const row = rows[rowIndex];
-        const translation =  rowHeight - row.height;
+        const translation = rowHeight - row.height;
         const cssHeight = `${rowHeight}px`;
 
         for (const {style} of scrollArea.querySelectorAll(`.r-${rowIndex}`)) {
             style.height = cssHeight;
         }
-        for (const {style, offsetTop} of leftHeader.querySelectorAll(`.r-${rowIndex} ~ .cell`)) {
+        for (const {style, offsetTop} of rowHeader.querySelectorAll(`.r-${rowIndex} ~ .cell`)) {
             style.top = `${offsetTop + translation}px`;
         }
         let rowElement = sheet.querySelector(`[row="${rowIndex}"]`);
@@ -246,7 +235,7 @@ SleekGrid.features.after(function createdCallback() {
 
         row.height = rowHeight;
 
-        sleekGrid.viewPortRange.refresh(translation);
+        viewPort.range.resize(0, translation);
     }
 
     // =========================================================================================================
@@ -258,7 +247,7 @@ SleekGrid.features.after(function createdCallback() {
             "stub handle width-handle": createDragHandler(headerWidthResizeCallback),
             "stub handle height-handle": createDragHandler(headerHeightResizeCallback),
             "handle width-handle": createDragHandler(columnResizeCallback),
-            "handle height-handle": createDragHandler(rowResizeCallback),
+            "handle height-handle": createDragHandler(rowResizeCallback)
         },
         dblclick: {
             "handle width-handle": createAutosizeHandler(columnFitCallback, maxWidth),

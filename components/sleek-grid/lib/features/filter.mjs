@@ -50,9 +50,9 @@ function createFilter(columns, filterId) {
         } else {
             return code;
         }
-    }, "return true") + "\n" + sourceURL("filter", `sleek-grid[grid-id="${filterId}"]`);
+    }, "row.index = index;\nreturn true") + "\n" + sourceURL("filter", `sleek-grid[grid-id="${filterId}"]`);
     if (filters.length > 0) {
-        return new Function("row", body).bind(filters);
+        return new Function("row", "index", body).bind(filters);
     }
 }
 
@@ -84,8 +84,6 @@ SleekGrid.features.before("render", next => function filter({columns, rows}) {
     if (rows !== this.properties.rows) {
         filtered.rows = apply(this.filter, rows);
     }
-
-    console.log("filtered", filtered);
 
     next(filtered);
 });

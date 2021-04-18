@@ -47,7 +47,5 @@ SleekGrid.features.before("render", next => function sort({columns, rows}) {
         }
     }
 
-    console.log("sorted", sorted);
-
     next(sorted);
 });

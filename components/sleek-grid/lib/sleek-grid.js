@@ -1,14 +1,13 @@
 import {sleekStyle} from "./styles/sleek.js";
 import {staticStyle} from "./styles/static.js";
 import {cloneCell, cloneColumnHeader, cloneGridTemplate, cloneRow, cloneRowHeader} from "./templates.js";
-import {importColumns, importRows, sourceCode, textWidth} from "./utility.mjs";
+import {sourceCode} from "./utility.mjs";
 import {ViewPortRange} from "./view-port.mjs";
 
 let gridId = 0;
 
-const $RR = Symbol("row");
-const $RH = Symbol("row-header");
-const $CH = Symbol("column-header");
+export const _ROW_ = Symbol();
+export const _ROW_HEADER_ = Symbol();
 
 export class SleekGrid extends HTMLElement {
 
@@ -31,11 +30,7 @@ export class SleekGrid extends HTMLElement {
         this.rowHeader = this.shadowRoot.getElementById("left-header");
         this.sheet = this.shadowRoot.getElementById("sheet");
 
-        const refresh = this.refresh.bind(this);
-        this.resizeObserver = new ResizeObserver(refresh);
-        this.resizeObserver.observe(this.viewPort);
-        this.viewPort.addEventListener("scroll", refresh, {passive: true});
-
+        this.pendingUpdate = null;
         this.properties = {
             rows: [],
             columns: []
@@ -45,19 +40,23 @@ export class SleekGrid extends HTMLElement {
         this.rows = [];
         this.columns = [];
 
-        this.features = {};
-
         this.createdCallback();
+    }
 
-        let pendingUpdate;
-        this.requestUpdate = (properties = this.properties) => {
-            cancelAnimationFrame(pendingUpdate);
-            pendingUpdate = requestAnimationFrame(() => {
-                properties = {...this.properties, ...properties};
-                this.render(properties);
-                this.properties = properties;
-            });
-        };
+    createdCallback() {
+    }
+
+    // =========================================================================================================
+    // PROPERTIES
+    // =========================================================================================================
+
+    requestUpdate(properties = this.properties) {
+        cancelAnimationFrame(this.pendingUpdate);
+        this.pendingUpdate = requestAnimationFrame(() => {
+            properties = {...this.properties, ...properties};
+            this.render(properties);
+            this.properties = properties;
+        });
     }
 
     set data(data) {
@@ -65,167 +64,164 @@ export class SleekGrid extends HTMLElement {
     }
 
     // =========================================================================================================
-    // PROPERTIES
-    // =========================================================================================================
-
-    createdCallback() {
-    }
-
-    // =========================================================================================================
     // MOUNT/UNMOUNT
     // =========================================================================================================
 
     connectedCallback() {
+
+        this.viewPort.range = new ViewPortRange(this);
+        this.viewPort.range.onchange = this.viewPortUpdated;
+
         const {columns, rows} = this.properties;
         this.render({columns: [...columns], rows: [...rows]});
     }
 
     disconnectedCallback() {
+
+        this.viewPort.range.destroy();
     }
 
     // =========================================================================================================
     // RENDERING
     // =========================================================================================================
 
-    render({columns, rows}) {
+    render(properties) {
 
-        if (columns !== this.columns) {
-            this.columns = importColumns(columns, this.columnWidthFunction(columns, rows));
-            const {left, width} = this.columns[this.columns.length - 1] || {left: 0, width: 0};
-            this.scrollArea.style.width = `${left + width}px`;
-        }
+        const {range} = this.viewPort;
+        const {
+            topIndex: lastTopIndex,
+            bottomIndex: lastBottomIndex,
+            leftIndex: lastLeftIndex,
+            rightIndex: lastRightIndex
+        } = range;
 
-        if (rows !== this.rows) {
-            this.rows = importRows(rows, this.rowHeightFunction(columns, rows));
-            const {top, height} = this.rows[this.rows.length - 1] || {top: 0, height: 0};
-            this.scrollArea.style.height = `${top + height}px`;
-        }
-
-        this.viewPortRange = ViewPortRange(this);
-
+        range.properties = properties;
         const {
             topIndex,
             bottomIndex,
             leftIndex,
             rightIndex
-        } = this.viewPortRange.state;
+        } = range;
 
-        // console.log("render:", this.columns.length, this.rows.length, {
-        //     topIndex,
-        //     bottomIndex,
-        //     leftIndex,
-        //     rightIndex
-        // }, new Error().stack);
+        const lastRows = new Map();
+        for (let rowIndex = lastTopIndex; rowIndex < lastBottomIndex; ++rowIndex) {
+            const lastRow = this.rows[rowIndex];
+            lastRows.set(lastRow.index ?? rowIndex, lastRow);
+        }
 
-        let columnIndex = leftIndex, ch = this.columnHeader.firstChild;
-        while (ch && columnIndex < rightIndex) {
-            this.createColumnHeader(columnIndex++, ch);
-            ch = ch.nextSibling;
+        this.columns = properties.columns;
+        this.rows = properties.rows;
+
+        let columnIndex = leftIndex;
+        let columnHeaderCell = this.columnHeader.firstChild;
+        while (columnIndex < rightIndex && columnHeaderCell) {
+            this.createColumnHeader(columnIndex++, columnHeaderCell);
+            columnHeaderCell = columnHeaderCell.nextSibling;
         }
-        if (ch) {
-            let last;
-            do {
-                last = this.columnHeader.removeChild(this.columnHeader.lastChild);
-            } while (last !== ch);
-        }
+        if (columnHeaderCell) do {
+        } while (columnHeaderCell !== this.columnHeader.removeChild(this.columnHeader.lastChild));
         while (columnIndex < rightIndex) {
-            this.columnHeader.appendChild(this.createColumnHeader(columnIndex++));
+            this.columnHeader.appendChild(this.createColumnHeader(columnIndex++, columnHeaderCell));
         }
 
         for (let rowIndex = topIndex; rowIndex < bottomIndex; ++rowIndex) {
-            this.rows[rowIndex][$RH] = this.rowHeader.appendChild(this.createRowHeader(rowIndex));
-            this.rows[rowIndex][$RR] = this.sheet.appendChild(this.createRow(rowIndex, leftIndex, rightIndex));
+            const row = this.rows[rowIndex];
+            const key = row.index ?? rowIndex;
+            const recycled = lastRows.get(key);
+            if (recycled) {
+                lastRows.delete(key);
+                row[_ROW_HEADER_] = this.createRowHeader(rowIndex, recycled[_ROW_HEADER_]);
+                row[_ROW_] = this.createRow(rowIndex, leftIndex, rightIndex, recycled[_ROW_]);
+            } else {
+                row[_ROW_HEADER_] = this.rowHeader.appendChild(this.createRowHeader(rowIndex));
+                row[_ROW_] = this.sheet.appendChild(this.createRow(rowIndex, leftIndex, rightIndex));
+                row[_ROW_HEADER_].classList.add("enter");
+                row[_ROW_].classList.add("enter");
+            }
         }
-    }
 
-    columnWidthFunction(columns, rows) {
-        if (this.autosize === "quick") {
-            return ({label, name}) => {
-                let width = textWidth(label);
-                for (const row of rows) {
-                    width = Math.max(width, textWidth(row[name]));
-                }
-                return (.6 * width) + 32;
-            };
-        } else {
-            const width = this.viewPort.clientWidth / columns.length;
-            return () => width;
+        for (const lastRow of lastRows.values()) {
+            lastRow[_ROW_HEADER_].classList.add("leave");
+            lastRow[_ROW_].classList.add("leave");
         }
-    }
 
-    rowHeightFunction(columns, rows) {
-        return index => 32;
+        this.scrollArea.classList.add("rendering");
+        setTimeout(() => {
+            this.scrollArea.classList.remove("rendering");
+            for (const entered of this.scrollArea.querySelectorAll(".enter")) {
+                entered.classList.remove("enter");
+            }
+            for (const left of this.scrollArea.querySelectorAll(".leave")) {
+                left.remove();
+            }
+        }, 333);
     }
 
     scrollTo(x, y) {
         this.viewPort.scrollTo(x, y);
     }
 
-    refresh() {
+    viewPortUpdated({topIndex, bottomIndex, leftIndex, rightIndex}, last) {
+        let enterIndexStart;
+        let enterIndexEnd;
+        let leaveIndexStart;
+        let leaveIndexEnd;
 
-        let {
-            topIndex,
-            bottomIndex,
-            leftIndex,
-            rightIndex,
-            previous
-        } = this.viewPortRange(this.viewPort);
-
-        if (topIndex < previous.topIndex) {
-            this.moveVertically(
-                topIndex, Math.min(bottomIndex, previous.topIndex),
-                Math.max(bottomIndex, previous.topIndex), previous.bottomIndex,
-                leftIndex, rightIndex
-            );
+        if (topIndex < last.topIndex || bottomIndex < last.bottomIndex) {
+            enterIndexStart = topIndex;
+            enterIndexEnd = Math.min(bottomIndex, last.topIndex);
+            leaveIndexStart = Math.max(bottomIndex, last.topIndex);
+            leaveIndexEnd = last.bottomIndex;
+            this.refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex);
         }
 
-        if (bottomIndex > previous.bottomIndex) {
-            this.moveVertically(
-                Math.max(topIndex, previous.bottomIndex), bottomIndex,
-                previous.topIndex, Math.min(topIndex, previous.bottomIndex),
-                leftIndex, rightIndex
-            );
+        if (bottomIndex > last.bottomIndex || topIndex > last.topIndex) {
+            enterIndexStart = Math.max(topIndex, last.bottomIndex);
+            enterIndexEnd = bottomIndex;
+            leaveIndexStart = last.topIndex;
+            leaveIndexEnd = Math.min(topIndex, last.bottomIndex);
+            this.refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex);
         }
 
-        if (leftIndex < previous.leftIndex) {
-            this.goLeft(
-                leftIndex, Math.min(previous.leftIndex, rightIndex),
-                Math.max(previous.leftIndex, rightIndex), previous.rightIndex,
-                topIndex, bottomIndex
-            );
+        if (leftIndex < last.leftIndex || rightIndex < last.rightIndex) {
+            enterIndexStart = leftIndex;
+            enterIndexEnd = Math.min(last.leftIndex, rightIndex);
+            leaveIndexStart = Math.max(last.leftIndex, rightIndex);
+            leaveIndexEnd = last.rightIndex;
+            this.goLeft(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, topIndex, bottomIndex);
         }
 
-        if (rightIndex > previous.rightIndex) {
-            this.goRight(
-                Math.max(previous.rightIndex, leftIndex), rightIndex,
-                previous.leftIndex, Math.min(previous.rightIndex, leftIndex),
-                topIndex, bottomIndex
-            );
+        if (rightIndex > last.rightIndex || leftIndex > last.leftIndex) {
+            enterIndexStart = Math.max(last.rightIndex, leftIndex);
+            enterIndexEnd = rightIndex;
+            leaveIndexStart = last.leftIndex;
+            leaveIndexEnd = Math.min(last.rightIndex, leftIndex);
+            this.goRight(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, topIndex, bottomIndex);
         }
     }
 
-    moveVertically(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex) {
+    refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex) {
         const {rows} = this;
         let leaveIndex = leaveIndexStart;
         let enterIndex = enterIndexStart;
         while (enterIndex < enterIndexEnd && leaveIndex < leaveIndexEnd) {
-            rows[enterIndex][$RH] = this.createRowHeader(enterIndex, rows[leaveIndex][$RH]);
-            rows[enterIndex][$RR] = this.createRow(enterIndex, leftIndex, rightIndex, rows[leaveIndex][$RR]);
-            rows[leaveIndex][$RH] = undefined;
-            rows[leaveIndex][$RR] = undefined;
+            rows[enterIndex][_ROW_HEADER_] = this.createRowHeader(enterIndex, rows[leaveIndex][_ROW_HEADER_]);
+            rows[enterIndex][_ROW_] = this.createRow(enterIndex, leftIndex, rightIndex, rows[leaveIndex][_ROW_]);
+            rows[leaveIndex][_ROW_HEADER_] = undefined;
+            rows[leaveIndex][_ROW_] = undefined;
             ++enterIndex;
             ++leaveIndex;
         }
         while (leaveIndex < leaveIndexEnd) {
-            rows[leaveIndex][$RH].remove();
-            rows[leaveIndex][$RR].remove();
-            rows[leaveIndex][$RH] = undefined;
-            rows[leaveIndex][$RR] = undefined;
+            rows[leaveIndex][_ROW_HEADER_].remove();
+            rows[leaveIndex][_ROW_].remove();
+            rows[leaveIndex][_ROW_HEADER_] = undefined;
+            rows[leaveIndex][_ROW_] = undefined;
             ++leaveIndex;
         }
         while (enterIndex < enterIndexEnd) {
-            rows[enterIndex][$RH] = this.rowHeader.appendChild(this.createRowHeader(enterIndex));
-            rows[enterIndex][$RR] = this.sheet.appendChild(this.createRow(enterIndex, leftIndex, rightIndex));
+            rows[enterIndex][_ROW_HEADER_] = this.rowHeader.appendChild(this.createRowHeader(enterIndex));
+            rows[enterIndex][_ROW_] = this.sheet.appendChild(this.createRow(enterIndex, leftIndex, rightIndex));
             ++enterIndex;
         }
     }
@@ -244,7 +240,7 @@ export class SleekGrid extends HTMLElement {
             columnHeader.appendChild(this.createColumnHeader(enterIndex++));
         }
         for (let rowIndex = topIndex, rowElement; rowIndex < bottomIndex; ++rowIndex) {
-            rowElement = rows[rowIndex][$RR];
+            rowElement = rows[rowIndex][_ROW_];
             enterIndex = enterIndexStart;
             leaveIndex = leaveIndexStart;
             while (enterIndex < enterIndexEnd && leaveIndex++ < leaveIndexEnd) {
@@ -263,23 +259,23 @@ export class SleekGrid extends HTMLElement {
         const {columnHeader, rows} = this;
         let enterIndex = enterIndexEnd;
         let leaveIndex = leaveIndexEnd;
-        while (--enterIndex >= enterIndexStart && --leaveIndex >= leaveIndexEnd) {
+        while (--enterIndex >= enterIndexStart && --leaveIndex >= leaveIndexStart) {
             columnHeader.insertBefore(this.createColumnHeader(enterIndex, columnHeader.lastChild), columnHeader.firstChild);
         }
-        while (leaveIndex-- >= leaveIndexStart) {
+        while (--leaveIndex >= leaveIndexStart) {
             columnHeader.lastChild.remove();
         }
         while (enterIndex >= enterIndexStart) {
             columnHeader.insertBefore(this.createColumnHeader(enterIndex--), columnHeader.firstChild);
         }
         for (let rowIndex = topIndex, rowElement; rowIndex < bottomIndex; ++rowIndex) {
-            rowElement = rows[rowIndex][$RR];
+            rowElement = rows[rowIndex][_ROW_];
             enterIndex = enterIndexEnd;
             leaveIndex = leaveIndexEnd;
-            while (--enterIndex >= enterIndexStart && --leaveIndex >= leaveIndexEnd) {
+            while (--enterIndex >= enterIndexStart && --leaveIndex >= leaveIndexStart) {
                 rowElement.insertBefore(this.createCell(enterIndex, rowIndex, rowElement.lastChild), rowElement.firstChild);
             }
-            while (leaveIndex-- >= leaveIndexStart) {
+            while (--leaveIndex >= leaveIndexStart) {
                 rowElement.lastChild.remove();
             }
             while (enterIndex >= enterIndexStart) {

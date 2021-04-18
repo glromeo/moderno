@@ -5,6 +5,8 @@ staticStyle.replaceSync(`
     :host {
         --header-width: 50px;
         --header-height: 32px;
+        --sheet-width: auto;
+        --sheet-height: auto;
         display: contents;
     }
     
@@ -55,6 +57,8 @@ staticStyle.replaceSync(`
     
     #scroll-area {
         position: relative;
+        width: var(--sheet-width);
+        height: var(--sheet-height);
     }
     
     #top-header {
@@ -62,7 +66,7 @@ staticStyle.replaceSync(`
         top: 0;
         z-index: 10;
         margin-left: var(--header-width);
-        width: calc(100% - 2px);
+        width: var(--sheet-width);
         height: var(--header-height);
     }
     
@@ -75,7 +79,7 @@ staticStyle.replaceSync(`
         float: left;
         left: 0;
         width: var(--header-width);
-        height: calc(100% - 2px);
+        height: var(--sheet-height);
         z-index: 10;
     }
     
@@ -85,7 +89,7 @@ staticStyle.replaceSync(`
     }
     
     #sheet{
-        position: relative;
+        position: absolute;
         left: var(--header-width);
     }
     
@@ -100,7 +104,7 @@ staticStyle.replaceSync(`
     .row {
         position: absolute;
         white-space: nowrap;
-        width: 100%;
+        width: var(--sheet-width);
     }
     
     .handle {

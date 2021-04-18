@@ -1,139 +1,116 @@
+const HZ_OVERFLOW = 0; // 3 * 150;
+const VT_OVERFLOW = 0; // 3 * 32;
+
 export function ViewPortRange(grid) {
 
-    const HZ_OVERFLOW = 3 * 150;
-    const VT_OVERFLOW = 3 * 32;
+    const {viewPort} = grid;
 
-    const {
-        columns,
-        rows,
-        scrollArea: {
-            clientWidth: totalWidth, clientHeight: totalHeight
-        },
-        viewPort: {
-            scrollLeft, scrollTop, clientWidth, clientHeight
+    let {columns, rows} = grid;
+    let [sheetWidth, sheetHeight] = [totalWidth(columns), totalHeight(rows)]
+    let binarySearchThresholdX = Math.log2(columns.length) * sheetWidth / columns.length;
+    let binarySearchThresholdY = Math.log2(rows.length) * sheetHeight / rows.length;
+
+    this.left = Math.max(0, viewPort.scrollLeft - HZ_OVERFLOW);
+    this.top = Math.max(0, viewPort.scrollTop, -VT_OVERFLOW);
+    this.right = Math.min(sheetWidth, viewPort.scrollLeft + viewPort.clientWidth + HZ_OVERFLOW);
+    this.bottom = Math.min(sheetHeight, viewPort.scrollTop + viewPort.clientHeight + VT_OVERFLOW);
+
+    this.topIndex = findRowIndex(this.top);
+    this.bottomIndex = rows.length ? 1 + findRowIndex(this.bottom - 1) : 0;
+    this.leftIndex = findColumnIndex(this.left);
+    this.rightIndex = columns.length ? 1 + findColumnIndex(this.right - 1) : 0;
+
+    let previous = {};
+
+    const update = () => {
+
+        previous = {
+            topIndex: this.topIndex,
+            bottomIndex: this.bottomIndex,
+            leftIndex: this.leftIndex,
+            rightIndex: this.rightIndex,
         }
-    } = grid;
 
-    const binarySearchThresholdX = Math.log2(columns.length) * totalWidth / columns.length;
-    const binarySearchThresholdY = Math.log2(rows.length) * totalHeight / rows.length;
-
-    const left = Math.max(0, scrollLeft - HZ_OVERFLOW);
-    const right = Math.min(totalWidth, scrollLeft + clientWidth + HZ_OVERFLOW);
-    const top = Math.max(0, scrollTop, -VT_OVERFLOW);
-    const bottom = Math.min(totalHeight, scrollTop + clientHeight + VT_OVERFLOW);
-
-    const state = {
-
-        left: left,
-        top: top,
-        right: right,
-        bottom: bottom,
-
-        topIndex: rowIndex(top),
-        bottomIndex: rows.length ? 1 + rowIndex(bottom - 1) : 0,
-        leftIndex: columnIndex(left),
-        rightIndex: columns.length ? 1 + columnIndex(right - 1) : 0,
-
-        previous: null
-    };
-
-    function update({scrollLeft, scrollTop, clientWidth, clientHeight}) {
+        const {scrollLeft, scrollTop, clientWidth, clientHeight} = viewPort;
 
         const left = Math.max(0, scrollLeft - HZ_OVERFLOW);
-        const right = Math.min(totalWidth, scrollLeft + clientWidth + HZ_OVERFLOW);
         const top = Math.max(0, scrollTop - VT_OVERFLOW);
-        const bottom = Math.min(totalHeight, scrollTop + clientHeight + VT_OVERFLOW);
+        const right = Math.min(sheetWidth, scrollLeft + clientWidth + HZ_OVERFLOW);
+        const bottom = Math.min(sheetHeight, scrollTop + clientHeight + VT_OVERFLOW);
 
-        state.previous = {
-            topIndex: state.topIndex,
-            bottomIndex: state.bottomIndex,
-            leftIndex: state.leftIndex,
-            rightIndex: state.rightIndex
-        }
-
-        if (top < state.top) {
-            if (top < state.top - binarySearchThresholdY) {
-                state.topIndex = rowIndex(top, 0, state.topIndex);
-            } else {
-                state.topIndex = moveUp(top, state.topIndex);
+        if (this.bottomIndex <= 0) {
+            this.bottomIndex = rows.length ? 1 + findRowIndex(bottom - 1) : 0;
+        } else {
+            if (top < this.top) {
+                if (top < this.top - binarySearchThresholdY) {
+                    this.topIndex = findRowIndex(top, 0, this.topIndex);
+                } else {
+                    this.topIndex = decreaseRowIndex(top, this.topIndex);
+                }
+            }
+            if (bottom < this.bottom) {
+                if (bottom < this.bottom - binarySearchThresholdY) {
+                    this.bottomIndex = 1 + findRowIndex(bottom - 1, this.topIndex, this.bottomIndex - 1);
+                } else {
+                    this.bottomIndex = 1 + decreaseRowIndex(bottom - 1, this.bottomIndex - 1);
+                }
+            }
+            if (bottom > this.bottom) {
+                if (bottom > this.bottom + binarySearchThresholdY) {
+                    this.bottomIndex = 1 + findRowIndex(bottom - 1, this.bottomIndex - 1);
+                } else {
+                    this.bottomIndex = 1 + increaseRowIndex(bottom - 1, this.bottomIndex - 1);
+                }
+            }
+            if (top > this.top) {
+                if (top > this.top + binarySearchThresholdY) {
+                    this.topIndex = findRowIndex(top, this.topIndex, this.bottomIndex - 1);
+                } else {
+                    this.topIndex = increaseRowIndex(top, this.topIndex);
+                }
             }
         }
 
-        if (bottom < state.bottom) {
-            if (bottom < state.bottom - binarySearchThresholdY) {
-                state.bottomIndex = 1 + rowIndex(bottom - 1, state.topIndex, state.bottomIndex - 1);
-            } else {
-                state.bottomIndex = 1 + moveUp(bottom - 1, state.bottomIndex - 1);
+        if (this.rightIndex <= 0) {
+            this.rightIndex = columns.length ? 1 + findColumnIndex(right - 1) : 0;
+        } else {
+            if (left < this.left) {
+                if (left < this.left - binarySearchThresholdX) {
+                    this.leftIndex = findColumnIndex(left, 0, this.leftIndex);
+                } else {
+                    this.leftIndex = decreaseColumnIndex(left, this.leftIndex);
+                }
+            }
+            if (right < this.right) {
+                if (right < this.right - binarySearchThresholdX) {
+                    this.rightIndex = 1 + findColumnIndex(right - 1, this.leftIndex, this.rightIndex - 1);
+                } else {
+                    this.rightIndex = 1 + decreaseColumnIndex(right - 1, this.rightIndex - 1);
+                }
+            }
+            if (right > this.right) {
+                if (right > this.right + binarySearchThresholdX) {
+                    this.rightIndex = 1 + findColumnIndex(right - 1, this.rightIndex - 1);
+                } else {
+                    this.rightIndex = 1 + increaseColumnIndex(right - 1, this.rightIndex - 1);
+                }
+            }
+            if (left > this.left) {
+                if (left > this.left + binarySearchThresholdX) {
+                    this.leftIndex = findColumnIndex(left, this.leftIndex, this.rightIndex - 1);
+                } else {
+                    this.leftIndex = increaseColumnIndex(left, this.leftIndex);
+                }
             }
         }
 
-        if (bottom > state.bottom) {
-            if (bottom > state.bottom + binarySearchThresholdY) {
-                state.bottomIndex = 1 + rowIndex(bottom - 1, state.bottomIndex - 1);
-            } else {
-                state.bottomIndex = 1 + moveDown(bottom - 1, state.bottomIndex - 1);
-            }
-        }
+        this.left = left;
+        this.right = right;
+        this.top = top;
+        this.bottom = bottom;
+    };
 
-        if (top > state.top) {
-            if (top > state.top + binarySearchThresholdY) {
-                state.topIndex = rowIndex(top, state.topIndex, state.bottomIndex - 1);
-            } else {
-                state.topIndex = moveDown(top, state.topIndex);
-            }
-        }
-
-        if (left < state.left) {
-            if (left < state.left - binarySearchThresholdX) {
-                state.leftIndex = columnIndex(left, 0, state.leftIndex);
-            } else {
-                state.leftIndex = moveLeft(left, state.leftIndex);
-            }
-        }
-
-        if (right < state.right) {
-            if (right < state.right - binarySearchThresholdX) {
-                state.rightIndex = 1 + columnIndex(right - 1, state.leftIndex, state.rightIndex - 1);
-            } else {
-                state.rightIndex = 1 + moveLeft(right - 1, state.rightIndex - 1);
-            }
-        }
-
-        if (right > state.right) {
-            if (right > state.right + binarySearchThresholdX) {
-                state.rightIndex = 1 + columnIndex(right - 1, state.rightIndex - 1);
-            } else {
-                state.rightIndex = 1 + moveRight(right - 1, state.rightIndex - 1);
-            }
-        }
-
-        if (left > state.left) {
-            if (left > state.left + binarySearchThresholdX) {
-                state.leftIndex = columnIndex(left, state.leftIndex, state.rightIndex - 1);
-            } else {
-                state.leftIndex = moveRight(left, state.leftIndex);
-            }
-        }
-
-        state.left = left;
-        state.right = right;
-        state.top = top;
-        state.bottom = bottom;
-
-        return state;
-    }
-
-    update.state = state;
-
-    update.refresh = function (offset) {
-        state.right += offset;
-        state.bottom += offset;
-        grid.refresh();
-    }
-
-    return update;
-
-    function columnIndex(edge, start = 0, end = columns.length - 1) {
+    function findColumnIndex(edge, start = 0, end = columns.length - 1) {
         let middle, distance;
         while (start < end) {
             middle = (start + end) >> 1;
@@ -150,7 +127,7 @@ export function ViewPortRange(grid) {
         return start;
     }
 
-    function rowIndex(edge, start = 0, end = rows.length - 1) {
+    function findRowIndex(edge, start = 0, end = rows.length - 1) {
         let middle, distance;
         while (start < end) {
             middle = (start + end) >> 1;
@@ -167,36 +144,117 @@ export function ViewPortRange(grid) {
         return start;
     }
 
-    function moveUp(top, rowIndex) {
+    function decreaseRowIndex(edge, rowIndex) {
         let row;
-        while ((row = rows[rowIndex]) && row.top > top) {
+        while ((row = rows[rowIndex]) && row.top > edge) {
             rowIndex--;
         }
         return row ? rowIndex : 0;
     }
 
-    function moveDown(top, rowIndex) {
+    function increaseRowIndex(edge, rowIndex) {
         let row;
-        while ((row = rows[rowIndex]) && row.top + row.height <= top) {
+        while ((row = rows[rowIndex]) && row.top + row.height <= edge) {
             rowIndex++;
         }
         return row ? rowIndex : rows.length - 1;
     }
 
-    function moveLeft(left, columnIndex) {
+    function decreaseColumnIndex(edge, columnIndex) {
         let column;
-        while ((column = columns[columnIndex]) && column.left > left) {
+        while ((column = columns[columnIndex]) && column.left > edge) {
             columnIndex--;
         }
         return column ? columnIndex : 0;
     }
 
-    function moveRight(left, columnIndex) {
+    function increaseColumnIndex(edge, columnIndex) {
         let column;
-        while ((column = columns[columnIndex]) && column.left + column.width <= left) {
+        while ((column = columns[columnIndex]) && column.left + column.width <= edge) {
             columnIndex++;
         }
         return column ? columnIndex : columns.length - 1;
-
     }
+
+    Object.defineProperty(this, "properties", {
+        set: properties => {
+            let shouldUpdate;
+
+            if (columns !== properties.columns) {
+                columns = properties.columns;
+                sheetWidth = totalWidth(columns);
+                if (sheetWidth) {
+                    grid.style.setProperty("--sheet-width", `${sheetWidth}px`);
+                    binarySearchThresholdX = Math.log2(columns.length) * sheetWidth / columns.length;
+                } else {
+                    grid.style.setProperty("--sheet-width", "auto");
+                    binarySearchThresholdX = 0;
+                }
+                shouldUpdate = true;
+            }
+
+            if (rows !== properties.rows) {
+                rows = properties.rows;
+                sheetHeight = totalHeight(rows);
+                if (sheetHeight) {
+                    grid.style.setProperty("--sheet-height", `${sheetHeight}px`);
+                    binarySearchThresholdY = Math.log2(rows.length) * sheetHeight / rows.length;
+                } else {
+                    grid.style.setProperty("--sheet-height", "auto");
+                    binarySearchThresholdY = 0;
+                }
+                shouldUpdate = true;
+            }
+
+            if (shouldUpdate) {
+                this.bottomIndex = Math.min(this.bottomIndex, rows.length);
+                this.rightIndex = Math.min(this.rightIndex, columns.length);
+                update();
+            }
+        }
+    });
+
+    this.resize = () => {
+        throw new Error("No onchange callback assigned");
+    };
+
+    Object.defineProperty(this, "onchange", {
+        set: callback => {
+
+            this.resize = (columnTranslation, rowTranslation) => {
+                if (columnTranslation) {
+                    this.right += columnTranslation;
+                }
+                if (rowTranslation) {
+                    this.bottom += rowTranslation;
+                }
+                update();
+                callback.call(grid, this, previous);
+            };
+
+            const resize = () => {
+                update();
+                callback.call(grid, this, previous);
+            };
+
+            const observer = new ResizeObserver(resize);
+            observer.observe(viewPort);
+            viewPort.addEventListener("scroll", resize, {passive: true});
+
+            this.destroy = function () {
+                observer.disconnect();
+                viewPort.removeEventListener("scroll", resize, {passive: true});
+            };
+        }
+    });
+}
+
+function totalWidth(columns) {
+    const column = columns[columns.length-1];
+    return column ? column.left + column.width : 0;
+}
+
+function totalHeight(rows) {
+    const row = rows[rows.length-1];
+    return row ? row.top + row.height : 0;
 }

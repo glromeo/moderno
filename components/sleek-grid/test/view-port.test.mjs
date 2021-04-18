@@ -1,5 +1,5 @@
 import {importColumns, importRows} from "../lib/utility.mjs";
-import {ViewPortRange} from "../lib/view-port.mjs";
+import {ViewPortModel} from "../lib/view-port.mjs";
 
 describe("view-port", function () {
 
@@ -18,7 +18,7 @@ describe("view-port", function () {
         expect(totalWidth).toBe(3000);
         expect(totalHeight).toBe(2000);
 
-        let viewPortRange = new ViewPortRange({
+        let viewPortRange = new ViewPortModel({
             columns: columns,
             rows: rows,
             scrollArea: {
@@ -109,7 +109,7 @@ describe("view-port", function () {
         expect(totalWidth).toBe(3000);
         expect(totalHeight).toBe(2000);
 
-        let viewPortRange = new ViewPortRange({
+        let viewPortRange = new ViewPortModel({
             columns: columns,
             rows: rows,
             scrollArea: {

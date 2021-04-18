@@ -1,35 +1,7 @@
 import {cloneCell} from "./templates.js";
 
-export function importColumns(columns, columnWidth) {
-    const imported = new Array(columns.length);
-    let left = 0, index = 0;
-    while (index < columns.length) {
-        const column = columns[index];
-        const width = columnWidth(column);
-        imported[index++] = {
-            ...column,
-            left,
-            width
-        };
-        left += width;
-    }
-    return imported;
-}
-
-export function importRows(rows, rowHeight) {
-    const imported = new Array(rows.length);
-    let top = 0, index = 0;
-    while (index < rows.length) {
-        const row = rows[index];
-        const height = rowHeight(row);
-        imported[index++] = {
-            ...row,
-            top,
-            height
-        };
-        top += height;
-    }
-    return imported;
+export function textWidth(text) {
+    return text ? String(text).length * 12.5 : 20;
 }
 
 export function createTemplate(innerHTML, render) {
@@ -68,11 +40,6 @@ const REGEX_SPECIAL_CHARS = /([-*+?.^${}(|)[\]])/g;
 
 export function escapeRegex(str) {
     return str.replace(REGEX_SPECIAL_CHARS, '\\$1');
-}
-
-
-export function textWidth(text) {
-    return text ? String(text).length * 12.5 : 20;
 }
 
 let dragAnimationFrame;

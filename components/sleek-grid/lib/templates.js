@@ -73,7 +73,7 @@ export const cloneRowHeader = createTemplate(`
     const {label, top, height} = rows[rowIndex];
     this.index = rowIndex;
     this.className = `rh cell r-${rowIndex}`;
-    this.style.top = `${top}px`;
+    this.style.transform = `translateY(${top}px)`;
     this.style.height = `${height}px`;
     this.firstChild.replaceChildren(label ?? "n/a");
 });

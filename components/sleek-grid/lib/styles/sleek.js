@@ -137,6 +137,11 @@ sleekStyle.replaceSync(`
         border-bottom: 1px solid var(--border-color);
     }
     
+    .rh.cell,
+    .ch.cell {
+        background: var(--background-color);
+    }
+    
     .cell-text {
         position: relative;
         -webkit-user-select: text;
@@ -198,5 +203,19 @@ sleekStyle.replaceSync(`
     .search-input:valid ~ .search-icon {
         opacity: 1;
     }
+    
+    .enter {
+        z-index: 10000;
+    }
+    .leave {
+        opacity: 0;
+        z-index: 5000;
+    }
+
+    .rendering .rh.cell,
+    .rendering .row {
+        transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+    }
+
 
 `);
