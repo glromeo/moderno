@@ -6,7 +6,7 @@ export function ViewPortRange(grid) {
     const {viewPort} = grid;
 
     let {columns, rows} = grid;
-    let [sheetWidth, sheetHeight] = [totalWidth(columns), totalHeight(rows)]
+    let [sheetWidth, sheetHeight] = [totalWidth(columns), totalHeight(rows)];
     let binarySearchThresholdX = Math.log2(columns.length) * sheetWidth / columns.length;
     let binarySearchThresholdY = Math.log2(rows.length) * sheetHeight / rows.length;
 
@@ -28,8 +28,8 @@ export function ViewPortRange(grid) {
             topIndex: this.topIndex,
             bottomIndex: this.bottomIndex,
             leftIndex: this.leftIndex,
-            rightIndex: this.rightIndex,
-        }
+            rightIndex: this.rightIndex
+        };
 
         const {scrollLeft, scrollTop, clientWidth, clientHeight} = viewPort;
 
@@ -221,20 +221,28 @@ export function ViewPortRange(grid) {
     Object.defineProperty(this, "onchange", {
         set: callback => {
 
+            let animationFrame;
+
             this.resize = (columnTranslation, rowTranslation) => {
-                if (columnTranslation) {
-                    this.right += columnTranslation;
-                }
-                if (rowTranslation) {
-                    this.bottom += rowTranslation;
-                }
-                update();
-                callback.call(grid, this, previous);
+                if (!animationFrame) animationFrame = requestAnimationFrame(() => {
+                    animationFrame = null;
+                    if (columnTranslation) {
+                        this.right += columnTranslation;
+                    }
+                    if (rowTranslation) {
+                        this.bottom += rowTranslation;
+                    }
+                    update();
+                    callback.call(grid, this, previous);
+                });
             };
 
             const resize = () => {
-                update();
-                callback.call(grid, this, previous);
+                if (!animationFrame) animationFrame = requestAnimationFrame(() => {
+                    animationFrame = null;
+                    update();
+                    callback.call(grid, this, previous);
+                });
             };
 
             const observer = new ResizeObserver(resize);
@@ -250,11 +258,11 @@ export function ViewPortRange(grid) {
 }
 
 function totalWidth(columns) {
-    const column = columns[columns.length-1];
+    const column = columns[columns.length - 1];
     return column ? column.left + column.width : 0;
 }
 
 function totalHeight(rows) {
-    const row = rows[rows.length-1];
+    const row = rows[rows.length - 1];
     return row ? row.top + row.height : 0;
 }

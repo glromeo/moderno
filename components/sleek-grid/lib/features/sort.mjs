@@ -1,21 +1,23 @@
 import {SleekGrid} from "../sleek-grid.js";
 
 SleekGrid.features.after(function createdCallback() {
-    this.sorted = {}
+    this.sorted = {};
 });
 
 SleekGrid.features.after(function columnHeaderCallback(columnHeader) {
-
-    function toggleSort(column) {
-        return column.sort = !column.sort ? "asc" : column.sort = column.sort === "asc" ? "desc" : undefined;
-    }
-
     columnHeader.querySelector(".sort-icon").addEventListener("click", event => {
         event.preventDefault();
         event.stopPropagation();
-        const {index} = this.columnContext(event);
-        toggleSort(this.properties.columns[index]);
-        this.requestUpdate({columns: [...this.properties.columns]});
+        const {index: columnIndex} = this.columnContext(event);
+        this.requestUpdate({
+            columns: [...this.properties.columns.map((column, index) => {
+                if (index === columnIndex) {
+                    return {...column, sort: !column.sort ? "asc" : column.sort === "asc" ? "desc" : undefined};
+                } else {
+                    return {...column, sort: undefined};
+                }
+            })]
+        });
     });
 });
 

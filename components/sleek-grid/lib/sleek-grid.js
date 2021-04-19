@@ -18,7 +18,8 @@ export class SleekGrid extends HTMLElement {
 
         this.attachShadow({mode: "open"}).adoptedStyleSheets = [
             staticStyle,
-            sleekStyle
+            sleekStyle,
+            this.gridStyle = new CSSStyleSheet()
         ];
 
         this.shadowRoot.appendChild(cloneGridTemplate());
@@ -31,6 +32,7 @@ export class SleekGrid extends HTMLElement {
         this.sheet = this.shadowRoot.getElementById("sheet");
 
         this.pendingUpdate = null;
+
         this.properties = {
             rows: [],
             columns: []
@@ -154,7 +156,18 @@ export class SleekGrid extends HTMLElement {
             for (const left of this.scrollArea.querySelectorAll(".leave")) {
                 left.remove();
             }
-        }, 333);
+        }, 300);
+
+        let gridStyle = "";
+        for (let columnIndex = 0; columnIndex < rightIndex; ++columnIndex) {
+            const {left, width} = this.columns[columnIndex];
+            gridStyle += `.c-${columnIndex}{left:${left}px;width:${width}px;}\n`;
+        }
+        for (let rowIndex = 0; rowIndex < bottomIndex; ++rowIndex) {
+            const {top, height} = this.rows[rowIndex];
+            gridStyle += `.r-${rowIndex}{transform:translateY(${top}px);height:${height}px;}\n`;
+        }
+        this.gridStyle.replace(gridStyle);
     }
 
     scrollTo(x, y) {
@@ -198,6 +211,17 @@ export class SleekGrid extends HTMLElement {
             leaveIndexEnd = Math.min(last.rightIndex, leftIndex);
             this.goRight(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, topIndex, bottomIndex);
         }
+
+        let gridStyle = "";
+        for (let columnIndex = 0; columnIndex < rightIndex; ++columnIndex) {
+            const {left, width} = this.columns[columnIndex];
+            gridStyle += `.c-${columnIndex}{left:${left}px;width:${width}px;}\n`;
+        }
+        for (let rowIndex = 0; rowIndex < bottomIndex; ++rowIndex) {
+            const {top, height} = this.rows[rowIndex];
+            gridStyle += `.r-${rowIndex}{transform:translateY(${top}px);height:${height}px;}\n`;
+        }
+        this.gridStyle.replace(gridStyle);
     }
 
     refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex) {
@@ -332,6 +356,7 @@ export class SleekGrid extends HTMLElement {
         row.render(rowIndex, leftIndex, rightIndex);
         return row;
     }
+
 }
 
 SleekGrid.features = {

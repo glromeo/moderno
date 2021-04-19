@@ -44,8 +44,8 @@ export const cloneColumnHeader = createTemplate(`
     const headerContent = this.childNodes[1];
     this.index = columnIndex;
     this.className = `ch cell c-${columnIndex}`;
-    this.style.left = `${left}px`;
-    this.style.width = `${width}px`;
+    // this.style.left = `${left}px`;
+    // this.style.width = `${width}px`;
     const headerLabel = headerContent.childNodes[2];
     headerLabel.firstChild.replaceWith(label);
     const headerInput = headerContent.childNodes[0];
@@ -73,38 +73,30 @@ export const cloneRowHeader = createTemplate(`
     const {label, top, height} = rows[rowIndex];
     this.index = rowIndex;
     this.className = `rh cell r-${rowIndex}`;
-    this.style.transform = `translateY(${top}px)`;
-    this.style.height = `${height}px`;
     this.firstChild.replaceChildren(label ?? "n/a");
 });
 
 export const cloneCell = createTemplate(`
-<div class="cell c-0 r-0">
+<div class="cell c-0">
     <div class="cell-text"></div>
 </div>
 `, function render({columns, rows}, columnIndex, rowIndex) {
     const {name, left, width} = columns[columnIndex];
     const content = rows[rowIndex][name];
-    this.className = `cell c-${columnIndex} r-${rowIndex}`;
-    this.style.left = `${left}px`;
-    this.style.width = `${width}px`;
+    this.className = `cell c-${columnIndex}`;
     this.firstChild.replaceChildren(content ?? "");
 });
 
 export const cloneRow = createTemplate(`
 <div class="row even" row="0"></div>
 `, function render(grid, rowIndex, leftIndex, rightIndex) {
-    const {top, height} = grid.rows[rowIndex];
+    const {top, height, index} = grid.rows[rowIndex];
     this.index = rowIndex;
-    if (rowIndex % 2) {
-        this.className = "row odd";
+    if (index % 2) {
+        this.className = `row odd  r-${rowIndex}`;
     } else {
-        this.className = "row even";
+        this.className = `row even r-${rowIndex}`;
     }
-    this.setAttribute("row", rowIndex);
-    this.style.transform = `translateY(${top}px)`;
-    this.style.height = `${height}px`;
-
     let columnIndex = leftIndex;
     let recycledCell = this.firstChild;
     if (recycledCell) {

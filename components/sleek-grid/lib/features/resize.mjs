@@ -223,7 +223,7 @@ SleekGrid.features.after(function createdCallback() {
         for (const {style, offsetTop} of rowHeader.querySelectorAll(`.r-${rowIndex} ~ .cell`)) {
             style.top = `${offsetTop + translation}px`;
         }
-        let rowElement = sheet.querySelector(`[row="${rowIndex}"]`);
+        let rowElement = sheet.querySelector(`.r-${rowIndex}`);
         let nextRowIndex = rowIndex + 1;
         while ((rowElement = rowElement.nextSibling)) {
             const rowTop = rows[nextRowIndex++].top += translation;

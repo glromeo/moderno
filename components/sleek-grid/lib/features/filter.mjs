@@ -43,7 +43,7 @@ function createFilter(columns, filterId) {
     const filters = [];
     const body = columns.reduce((code, {name, search}, index) => {
         if (search) {
-            const filter = new RegExp(escapeRegex(search).replace(/\\\*/g, ".*"), "i");
+            const filter = new RegExp("^"+escapeRegex(search).replace(/\\\*/g, ".*"), "i");
             filters.push(filter);
             const field = JSON.stringify(name);
             return code + `\n&& this[${filters.length - 1}].test(row[${field}]) // [${index}] ${field} ${filter}`
@@ -66,6 +66,10 @@ function apply(filter, rows) {
                 }
                 return row;
             }, {})]
+        }
+    } else {
+        if (rows[0] && rows[0].index === undefined) {
+            rows.forEach((row, index)=>row.index=index);
         }
     }
     return rows;

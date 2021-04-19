@@ -205,16 +205,17 @@ sleekStyle.replaceSync(`
     }
     
     .enter {
-        z-index: 10000;
+        opacity: 0;
+        transform: translateY(0);
     }
     .leave {
         opacity: 0;
-        z-index: 5000;
+        transition: opacity 300ms ease;
     }
 
     .rendering .rh.cell,
     .rendering .row {
-        transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+        transition: transform 300ms ease;
     }
 
 
