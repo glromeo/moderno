@@ -204,19 +204,32 @@ sleekStyle.replaceSync(`
         opacity: 1;
     }
     
-    .enter {
+    .rendering * {
+        opacity: 1;
+        transition: opacity 300ms ease, transform 300ms ease;
+    }
+    
+    .rendering .enter {
         opacity: 0;
         transform: translateY(0);
     }
-    .leave {
+    .rendering .leave {
         opacity: 0;
-        transition: opacity 300ms ease;
+        transform: translateX(10000);
+        transition: opacity 300ms ease, transform 300ms ease;
     }
 
-    .rendering .rh.cell,
-    .rendering .row {
-        transition: transform 300ms ease;
+    .animate .row {
+        transition: transform 300ms ease-in-out;
+    }
+    
+    .cell.hidden {
+        width: 0;
+        transition: width 300ms ease-in-out;
     }
 
-
+    .hidden .cell-text {
+        opacity: 0;
+        transition: opacity 300ms ease-in-out;
+    }
 `);

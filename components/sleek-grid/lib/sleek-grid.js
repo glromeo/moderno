@@ -52,13 +52,15 @@ export class SleekGrid extends HTMLElement {
     // PROPERTIES
     // =========================================================================================================
 
-    requestUpdate(properties = this.properties) {
-        cancelAnimationFrame(this.pendingUpdate);
-        this.pendingUpdate = requestAnimationFrame(() => {
+    requestUpdate(properties) {
+        const trigger = this.pendingUpdate === null;
+        this.pendingUpdate = {...this.pendingUpdate, ...properties};
+        if (trigger) setTimeout(() => {
             properties = {...this.properties, ...properties};
             this.render(properties);
             this.properties = properties;
-        });
+            this.pendingUpdate = null;
+        }, 0);
     }
 
     set data(data) {
@@ -147,81 +149,61 @@ export class SleekGrid extends HTMLElement {
             lastRow[_ROW_].classList.add("leave");
         }
 
-        this.scrollArea.classList.add("rendering");
-        setTimeout(() => {
-            this.scrollArea.classList.remove("rendering");
+        requestAnimationFrame(()=>{
             for (const entered of this.scrollArea.querySelectorAll(".enter")) {
                 entered.classList.remove("enter");
             }
+        });
+
+        this.scrollArea.classList.add("rendering");
+        setTimeout(() => {
+            this.scrollArea.classList.remove("rendering");
             for (const left of this.scrollArea.querySelectorAll(".leave")) {
                 left.remove();
             }
-        }, 300);
-
-        let gridStyle = "";
-        for (let columnIndex = 0; columnIndex < rightIndex; ++columnIndex) {
-            const {left, width} = this.columns[columnIndex];
-            gridStyle += `.c-${columnIndex}{left:${left}px;width:${width}px;}\n`;
-        }
-        for (let rowIndex = 0; rowIndex < bottomIndex; ++rowIndex) {
-            const {top, height} = this.rows[rowIndex];
-            gridStyle += `.r-${rowIndex}{transform:translateY(${top}px);height:${height}px;}\n`;
-        }
-        this.gridStyle.replace(gridStyle);
+        }, 0);
     }
 
     scrollTo(x, y) {
         this.viewPort.scrollTo(x, y);
     }
 
-    viewPortUpdated({topIndex, bottomIndex, leftIndex, rightIndex}, last) {
-        let enterIndexStart;
-        let enterIndexEnd;
-        let leaveIndexStart;
-        let leaveIndexEnd;
+    viewPortUpdated(current, previous) {
 
-        if (topIndex < last.topIndex || bottomIndex < last.bottomIndex) {
+        const {topIndex, bottomIndex, leftIndex, rightIndex} = current;
+        let enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd;
+
+        if (topIndex < previous.topIndex || bottomIndex < previous.bottomIndex) {
             enterIndexStart = topIndex;
-            enterIndexEnd = Math.min(bottomIndex, last.topIndex);
-            leaveIndexStart = Math.max(bottomIndex, last.topIndex);
-            leaveIndexEnd = last.bottomIndex;
+            enterIndexEnd = Math.min(bottomIndex, previous.topIndex);
+            leaveIndexStart = Math.max(bottomIndex, previous.topIndex);
+            leaveIndexEnd = previous.bottomIndex;
             this.refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex);
         }
 
-        if (bottomIndex > last.bottomIndex || topIndex > last.topIndex) {
-            enterIndexStart = Math.max(topIndex, last.bottomIndex);
+        if (bottomIndex > previous.bottomIndex || topIndex > previous.topIndex) {
+            enterIndexStart = Math.max(topIndex, previous.bottomIndex);
             enterIndexEnd = bottomIndex;
-            leaveIndexStart = last.topIndex;
-            leaveIndexEnd = Math.min(topIndex, last.bottomIndex);
+            leaveIndexStart = previous.topIndex;
+            leaveIndexEnd = Math.min(topIndex, previous.bottomIndex);
             this.refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex);
         }
 
-        if (leftIndex < last.leftIndex || rightIndex < last.rightIndex) {
+        if (leftIndex < previous.leftIndex || rightIndex < previous.rightIndex) {
             enterIndexStart = leftIndex;
-            enterIndexEnd = Math.min(last.leftIndex, rightIndex);
-            leaveIndexStart = Math.max(last.leftIndex, rightIndex);
-            leaveIndexEnd = last.rightIndex;
+            enterIndexEnd = Math.min(previous.leftIndex, rightIndex);
+            leaveIndexStart = Math.max(previous.leftIndex, rightIndex);
+            leaveIndexEnd = previous.rightIndex;
             this.goLeft(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, topIndex, bottomIndex);
         }
 
-        if (rightIndex > last.rightIndex || leftIndex > last.leftIndex) {
-            enterIndexStart = Math.max(last.rightIndex, leftIndex);
+        if (rightIndex > previous.rightIndex || leftIndex > previous.leftIndex) {
+            enterIndexStart = Math.max(previous.rightIndex, leftIndex);
             enterIndexEnd = rightIndex;
-            leaveIndexStart = last.leftIndex;
-            leaveIndexEnd = Math.min(last.rightIndex, leftIndex);
+            leaveIndexStart = previous.leftIndex;
+            leaveIndexEnd = Math.min(previous.rightIndex, leftIndex);
             this.goRight(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, topIndex, bottomIndex);
         }
-
-        let gridStyle = "";
-        for (let columnIndex = 0; columnIndex < rightIndex; ++columnIndex) {
-            const {left, width} = this.columns[columnIndex];
-            gridStyle += `.c-${columnIndex}{left:${left}px;width:${width}px;}\n`;
-        }
-        for (let rowIndex = 0; rowIndex < bottomIndex; ++rowIndex) {
-            const {top, height} = this.rows[rowIndex];
-            gridStyle += `.r-${rowIndex}{transform:translateY(${top}px);height:${height}px;}\n`;
-        }
-        this.gridStyle.replace(gridStyle);
     }
 
     refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex) {

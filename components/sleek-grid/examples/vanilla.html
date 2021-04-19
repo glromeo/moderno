@@ -52,7 +52,7 @@
             {label: "Postcode", name: "postcode", width: 150},
             {label: "Phone_number", name: "phone_number", width: 150},
             {label: "Address", name: "address", width: 150},
-            {label: "Iban", name: "iban", width: 150},
+            {label: "Iban", name: "iban", width: 150}
         ];
 
         data.forEach((row, index) => {
@@ -63,10 +63,15 @@
         grid.rowHeight = index => 32;
 
         grid.renderCell = function (column, row) {
-            return `<span class="text">${row[column.name]}</span>`
-        }
+            return `<span class="text">${row[column.name]}</span>`;
+        };
 
-        grid.data = {columns: columns.slice(0, columns.length), rows: data};
+        let rows = data;
+        // for (let i = 0; i <10; i++) {
+        //     rows = [...rows, ...rows]
+        // }
+
+        grid.data = {columns: columns.slice(0, columns.length), rows: rows};
 
         let searchParams = new URLSearchParams(window.location.search.slice(1));
         if (searchParams.has("demo")) {
@@ -90,7 +95,7 @@
                     requestAnimationFrame(() => {
                         let top = 500, count = 0;
                         console.time("int");
-                        let interval = setInterval(function() {
+                        let interval = setInterval(function () {
                             ++count;
                             grid.scrollTo(0, (top += 500) % 31000);
                             if (top > 62000) {
@@ -105,7 +110,7 @@
                     requestAnimationFrame(() => {
                         let top = 1500, count = 0;
                         console.time("int");
-                        let interval = setInterval(function() {
+                        let interval = setInterval(function () {
                             ++count;
                             grid.scrollTo(0, (top += 1500) % 31000);
                             if (top > 62000) {
@@ -135,7 +140,7 @@
                     requestAnimationFrame(() => {
                         let top = 10, count = 0;
                         console.time("small");
-                        let interval = setInterval(function() {
+                        let interval = setInterval(function () {
                             ++count;
                             grid.scrollTo(0, top += 10);
                             if (top > 2000) {

@@ -163,20 +163,6 @@ staticStyle.replaceSync(`
         cursor: ns-resize;
     }
     
-    .animate .row {
-        transition: transform 300ms ease-in-out;
-    }
-    
-    .cell.hidden {
-        width: 0;
-        transition: width 300ms ease-in-out;
-    }
-
-    .hidden .cell-text {
-        opacity: 0;
-        transition: opacity 300ms ease-in-out;
-    }
-    
 `);
 
 

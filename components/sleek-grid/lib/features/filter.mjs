@@ -59,14 +59,6 @@ function createFilter(columns, filterId) {
 function apply(filter, rows) {
     if (filter) {
         rows = rows.filter(filter);
-        if (rows.length === 0) {
-            return [columns.reduce(function (row, column) {
-                if (column.search) {
-                    row[column.name] = "NO MATCH";
-                }
-                return row;
-            }, {})]
-        }
     } else {
         if (rows[0] && rows[0].index === undefined) {
             rows.forEach((row, index)=>row.index=index);
@@ -87,6 +79,15 @@ SleekGrid.features.before("render", next => function filter({columns, rows}) {
 
     if (rows !== this.properties.rows) {
         filtered.rows = apply(this.filter, rows);
+    }
+
+    if (this.filter && filtered.rows.length === 0) {
+        filtered.rows = [columns.reduce(function (row, column) {
+            if (column.search) {
+                row[column.name] = "NO MATCH";
+            }
+            return row;
+        }, {})]
     }
 
     next(filtered);
