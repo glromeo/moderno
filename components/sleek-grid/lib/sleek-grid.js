@@ -1,8 +1,19 @@
+import {autosizeColumns, autosizeRows, importColumns, importRows} from "./features/autosizing.mjs";
 import {sleekStyle} from "./styles/sleek.js";
 import {staticStyle} from "./styles/static.js";
 import {cloneCell, cloneColumnHeader, cloneGridTemplate, cloneRow, cloneRowHeader} from "./templates.js";
-import {sourceCode} from "./utility.mjs";
-import {ViewPortRange} from "./view-port.mjs";
+import {
+    applyFilter,
+    applySort,
+    createFilter,
+    findColumnIndex,
+    findRowIndex,
+    totalHeight,
+    totalWidth
+} from "./utility.mjs";
+
+const HZ_OVERFLOW = 3 * 150;
+const VT_OVERFLOW = 3 * 32;
 
 let gridId = 0;
 
@@ -16,10 +27,13 @@ export class SleekGrid extends HTMLElement {
 
         this.setAttribute("grid-id", gridId);
 
+        const gridStyle = new CSSStyleSheet();
+        this.gridStyle = gridStyle;
+
         this.attachShadow({mode: "open"}).adoptedStyleSheets = [
             staticStyle,
             sleekStyle,
-            this.gridStyle = new CSSStyleSheet()
+            gridStyle
         ];
 
         this.shadowRoot.appendChild(cloneGridTemplate());
@@ -31,40 +45,57 @@ export class SleekGrid extends HTMLElement {
         this.rowHeader = this.shadowRoot.getElementById("left-header");
         this.sheet = this.shadowRoot.getElementById("sheet");
 
-        this.pendingUpdate = null;
-
-        this.properties = {
-            rows: [],
-            columns: []
-        }; // keeps a copy of the properties set on the custom element
+        this.pendingUpdate = undefined;
 
         this.autosize = "quick";
         this.rows = [];
         this.columns = [];
 
-        this.createdCallback();
+        this.properties = {
+            rows: [],
+            columns: []
+        };
+
+        this.refresh = requestAnimationFrame.bind(window, this.refresh.bind(this));
+        this.resizeObserver = new ResizeObserver(this.refresh);
+
+        this.sheetWidth = this.scrollArea.clientWidth;
+        this.sheetHeight = this.scrollArea.clientHeight;
+
+        this.features();
     }
 
-    createdCallback() {
+    features() {
+        this?.theming();
+        this?.resizing();
     }
 
     // =========================================================================================================
     // PROPERTIES
     // =========================================================================================================
 
-    requestUpdate(properties) {
-        const trigger = this.pendingUpdate === null;
-        this.pendingUpdate = {...this.pendingUpdate, ...properties};
-        if (trigger) setTimeout(() => {
-            properties = {...this.properties, ...properties};
-            this.render(properties);
-            this.properties = properties;
-            this.pendingUpdate = null;
-        }, 0);
+    requestUpdate(changes) {
+        if (!this.pendingUpdate) {
+            this.pendingUpdate = Object.create(null);
+            setTimeout(() => {
+                this.update(this.pendingUpdate);
+                this.pendingUpdate = undefined;
+            }, 0);
+        }
+        Object.assign(this.pendingUpdate, changes);
     }
 
-    set data(data) {
-        this.requestUpdate(data);
+    update(changed = this.properties) {
+        Object.assign(this.properties, changed);
+        const properties = Object.assign(Object.create(this.properties), changed);
+        this.filter(properties);
+        this.sort(properties);
+        this.resize(properties);
+        this.render(properties);
+    }
+
+    set data({columns, rows}) {
+        this.requestUpdate({columns, rows});
     }
 
     // =========================================================================================================
@@ -72,84 +103,151 @@ export class SleekGrid extends HTMLElement {
     // =========================================================================================================
 
     connectedCallback() {
-
-        this.viewPort.range = new ViewPortRange(this);
-        this.viewPort.range.onchange = this.viewPortUpdated;
-
-        const {columns, rows} = this.properties;
-        this.render({columns: [...columns], rows: [...rows]});
+        this.update();
+        this.resizeObserver.observe(this.viewPort);
+        this.viewPort.addEventListener("scroll", this.refresh, {passive: true});
     }
 
     disconnectedCallback() {
-
-        this.viewPort.range.destroy();
+        this.resizeObserver.disconnect();
+        this.viewPort.removeEventListener("scroll", this.refresh, {passive: true});
     }
 
     // =========================================================================================================
     // RENDERING
     // =========================================================================================================
 
-    render(properties) {
+    filter(properties) {
 
-        const {range} = this.viewPort;
-        const {
-            topIndex: lastTopIndex,
-            bottomIndex: lastBottomIndex,
-            leftIndex: lastLeftIndex,
-            rightIndex: lastRightIndex
-        } = range;
+        let filter = createFilter(this.getAttribute("grid-id"), properties.columns, properties.external);
 
-        range.properties = properties;
-        const {
-            topIndex,
-            bottomIndex,
-            leftIndex,
-            rightIndex
-        } = range;
+        properties.rows = applyFilter(filter, properties.rows);
 
-        const lastRows = new Map();
-        for (let rowIndex = lastTopIndex; rowIndex < lastBottomIndex; ++rowIndex) {
-            const lastRow = this.rows[rowIndex];
-            lastRows.set(lastRow.index ?? rowIndex, lastRow);
+        if (filter && properties.rows.length === 0) {
+            properties.rows = [properties.columns.reduce(function (row, column) {
+                if (column.search) {
+                    row[column.name] = "NO MATCH";
+                }
+                return row;
+            }, {})];
+        }
+    }
+
+    sort(properties) {
+        properties.rows = applySort(properties.columns, properties.rows);
+    }
+
+    resize(properties) {
+        const {columns, rows} = properties;
+
+        if (properties.hasOwnProperty("columns")) {
+            properties.columns = importColumns(properties.columns, autosizeColumns({
+                mode: this.autosize,
+                columns: properties.columns,
+                rows: properties.rows,
+                viewPort: this.viewPort.getBoundingClientRect()
+            }));
+
+            this.sheetWidth = totalWidth(properties.columns);
+            if (this.sheetWidth) {
+                this.style.setProperty("--sheet-width", `${this.sheetWidth}px`);
+            } else {
+                this.style.setProperty("--sheet-width", "auto");
+                this.sheetWidth = this.scrollArea.clientWidth;
+            }
         }
 
-        this.columns = properties.columns;
-        this.rows = properties.rows;
+        if (properties.hasOwnProperty("rows")) {
+            properties.rows = importRows(properties.rows, autosizeRows({
+                mode: this.autosize,
+                columns: properties.columns,
+                rows: properties.rows,
+                viewPort: this.viewPort.getBoundingClientRect()
+            }));
 
-        let columnIndex = leftIndex;
+            this.sheetHeight = totalHeight(properties.rows);
+            if (this.sheetHeight) {
+                this.style.setProperty("--sheet-height", `${this.sheetHeight}px`);
+            } else {
+                this.style.setProperty("--sheet-height", "auto");
+                this.sheetHeight = this.scrollArea.clientHeight;
+            }
+        }
+
+        Object.assign(properties, this.range(properties));
+        this.replaceGridStyle(properties);
+    }
+
+    range({columns, rows} = this) {
+        const left = Math.max(0, this.viewPort.scrollLeft - HZ_OVERFLOW);
+        const top = Math.max(0, this.viewPort.scrollTop - VT_OVERFLOW);
+        const right = Math.min(this.sheetWidth, this.viewPort.scrollLeft + this.viewPort.clientWidth + HZ_OVERFLOW);
+        const bottom = Math.min(this.sheetHeight, this.viewPort.scrollTop + this.viewPort.clientHeight + VT_OVERFLOW);
+        return {
+            topIndex: findRowIndex(rows, top),
+            bottomIndex: rows.length ? 1 + findRowIndex(rows, bottom - 1) : 0,
+            leftIndex: findColumnIndex(columns, left),
+            rightIndex: columns.length ? 1 + findColumnIndex(columns, right - 1) : 0
+        };
+    }
+
+    replaceGridStyle({columns, rows, topIndex, bottomIndex, leftIndex, rightIndex} = this) {
+        let style = "";
+        for (let columnIndex = leftIndex; columnIndex < rightIndex; ++columnIndex) {
+            const {left, width} = columns[columnIndex];
+            style += `.c-${columnIndex}{left:${left}px;width:${width}px;}\n`;
+        }
+        for (let rowIndex = topIndex; rowIndex < bottomIndex; ++rowIndex) {
+            const {top, height} = rows[rowIndex];
+            style += `.r-${rowIndex}{transform:translateY(${top}px);height:${height}px;}\n`;
+        }
+        this.gridStyle.replace(style);
+    }
+
+    render(properties) {
+
+        const recycle = new Map();
+        for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; ++rowIndex) {
+            const lastRow = this.rows[rowIndex];
+            recycle.set(lastRow.index ?? rowIndex, lastRow);
+        }
+
+        Object.assign(this, properties);
+
+        let columnIndex = this.leftIndex;
         let columnHeaderCell = this.columnHeader.firstChild;
-        while (columnIndex < rightIndex && columnHeaderCell) {
+        while (columnIndex < this.rightIndex && columnHeaderCell) {
             this.createColumnHeader(columnIndex++, columnHeaderCell);
             columnHeaderCell = columnHeaderCell.nextSibling;
         }
         if (columnHeaderCell) do {
         } while (columnHeaderCell !== this.columnHeader.removeChild(this.columnHeader.lastChild));
-        while (columnIndex < rightIndex) {
+        while (columnIndex < this.rightIndex) {
             this.columnHeader.appendChild(this.createColumnHeader(columnIndex++, columnHeaderCell));
         }
 
-        for (let rowIndex = topIndex; rowIndex < bottomIndex; ++rowIndex) {
+        for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; ++rowIndex) {
             const row = this.rows[rowIndex];
             const key = row.index ?? rowIndex;
-            const recycled = lastRows.get(key);
+            const recycled = recycle.get(key);
             if (recycled) {
-                lastRows.delete(key);
+                recycle.delete(key);
                 row[_ROW_HEADER_] = this.createRowHeader(rowIndex, recycled[_ROW_HEADER_]);
-                row[_ROW_] = this.createRow(rowIndex, leftIndex, rightIndex, recycled[_ROW_]);
+                row[_ROW_] = this.createRow(rowIndex, this.leftIndex, this.rightIndex, recycled[_ROW_]);
             } else {
                 row[_ROW_HEADER_] = this.rowHeader.appendChild(this.createRowHeader(rowIndex));
-                row[_ROW_] = this.sheet.appendChild(this.createRow(rowIndex, leftIndex, rightIndex));
+                row[_ROW_] = this.sheet.appendChild(this.createRow(rowIndex, this.leftIndex, this.rightIndex));
                 row[_ROW_HEADER_].classList.add("enter");
                 row[_ROW_].classList.add("enter");
             }
         }
 
-        for (const lastRow of lastRows.values()) {
+        for (const lastRow of recycle.values()) {
             lastRow[_ROW_HEADER_].classList.add("leave");
             lastRow[_ROW_].classList.add("leave");
         }
 
-        requestAnimationFrame(()=>{
+        requestAnimationFrame(() => {
             for (const entered of this.scrollArea.querySelectorAll(".enter")) {
                 entered.classList.remove("enter");
             }
@@ -168,42 +266,44 @@ export class SleekGrid extends HTMLElement {
         this.viewPort.scrollTo(x, y);
     }
 
-    viewPortUpdated(current, previous) {
-
-        const {topIndex, bottomIndex, leftIndex, rightIndex} = current;
+    refresh() {
+        const {topIndex, bottomIndex, leftIndex, rightIndex} = this.range();
         let enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd;
 
-        if (topIndex < previous.topIndex || bottomIndex < previous.bottomIndex) {
+        if (topIndex < this.topIndex || bottomIndex < this.bottomIndex) {
             enterIndexStart = topIndex;
-            enterIndexEnd = Math.min(bottomIndex, previous.topIndex);
-            leaveIndexStart = Math.max(bottomIndex, previous.topIndex);
-            leaveIndexEnd = previous.bottomIndex;
+            enterIndexEnd = Math.min(bottomIndex, this.topIndex);
+            leaveIndexStart = Math.max(bottomIndex, this.topIndex);
+            leaveIndexEnd = this.bottomIndex;
             this.refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex);
         }
 
-        if (bottomIndex > previous.bottomIndex || topIndex > previous.topIndex) {
-            enterIndexStart = Math.max(topIndex, previous.bottomIndex);
+        if (bottomIndex > this.bottomIndex || topIndex > this.topIndex) {
+            enterIndexStart = Math.max(topIndex, this.bottomIndex);
             enterIndexEnd = bottomIndex;
-            leaveIndexStart = previous.topIndex;
-            leaveIndexEnd = Math.min(topIndex, previous.bottomIndex);
+            leaveIndexStart = this.topIndex;
+            leaveIndexEnd = Math.min(topIndex, this.bottomIndex);
             this.refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex);
         }
 
-        if (leftIndex < previous.leftIndex || rightIndex < previous.rightIndex) {
+        if (leftIndex < this.leftIndex || rightIndex < this.rightIndex) {
             enterIndexStart = leftIndex;
-            enterIndexEnd = Math.min(previous.leftIndex, rightIndex);
-            leaveIndexStart = Math.max(previous.leftIndex, rightIndex);
-            leaveIndexEnd = previous.rightIndex;
+            enterIndexEnd = Math.min(this.leftIndex, rightIndex);
+            leaveIndexStart = Math.max(this.leftIndex, rightIndex);
+            leaveIndexEnd = this.rightIndex;
             this.goLeft(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, topIndex, bottomIndex);
         }
 
-        if (rightIndex > previous.rightIndex || leftIndex > previous.leftIndex) {
-            enterIndexStart = Math.max(previous.rightIndex, leftIndex);
+        if (rightIndex > this.rightIndex || leftIndex > this.leftIndex) {
+            enterIndexStart = Math.max(this.rightIndex, leftIndex);
             enterIndexEnd = rightIndex;
-            leaveIndexStart = previous.leftIndex;
-            leaveIndexEnd = Math.min(previous.rightIndex, leftIndex);
+            leaveIndexStart = this.leftIndex;
+            leaveIndexEnd = Math.min(this.rightIndex, leftIndex);
             this.goRight(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, topIndex, bottomIndex);
         }
+
+        Object.assign(this, {topIndex, bottomIndex, leftIndex, rightIndex});
+        this.replaceGridStyle();
     }
 
     refreshRows(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, leftIndex, rightIndex) {
@@ -313,6 +413,58 @@ export class SleekGrid extends HTMLElement {
     }
 
     columnHeaderCallback(columnHeader) {
+        const searchInput = columnHeader.lastChild.firstChild;
+        const searchLabel = searchInput.nextSibling.nextSibling;
+        const searchIcon = searchLabel.nextSibling;
+
+        let focused;
+        searchInput.addEventListener("focus", () => {
+            focused = true;
+            searchInput.closest(".cell").scrollIntoView({behavior: "smooth", block: "end", inline: "nearest"});
+        });
+        searchInput.addEventListener("blur", () => focused = false);
+        searchInput.addEventListener("input", event => {
+            const {index} = this.columnContext(event);
+            this.properties.columns[index].search = searchInput.value;
+            this.requestUpdate({columns: [...this.properties.columns]});
+        });
+        searchIcon.addEventListener("mousedown", (event) => {
+            if (focused) {
+                event.target.focus();
+            } else {
+                event.preventDefault();
+                event.stopPropagation();
+                searchInput.focus();
+            }
+        }, true);
+        searchLabel.addEventListener("click", (event) => {
+            const {extentOffset, anchorOffset, focusNode} = this.shadowRoot.getSelection();
+            if (extentOffset === anchorOffset || focusNode.parentNode !== event.target) {
+                searchInput.focus();
+            }
+        }, false);
+
+        const sortIcon = searchLabel.lastChild;
+
+        sortIcon.addEventListener("mousedown", event => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+
+        sortIcon.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const {index: columnIndex} = this.columnContext(event);
+            this.requestUpdate({
+                columns: [...this.properties.columns.map((column, index) => {
+                    if (index === columnIndex) {
+                        return {...column, sort: !column.sort ? "asc" : column.sort === "asc" ? "desc" : undefined};
+                    } else {
+                        return {...column, sort: undefined};
+                    }
+                })]
+            });
+        });
     }
 
     createRowHeader(rowIndex, recycled) {
@@ -340,49 +492,3 @@ export class SleekGrid extends HTMLElement {
     }
 
 }
-
-SleekGrid.features = {
-
-    advices: {},
-
-    validate(advice, name) {
-        if (!name) {
-            throw new Error("A SleekGrid advice must be a named function e.g. function createdCallback() {...}");
-        }
-        if (!SleekGrid.prototype.hasOwnProperty(name)) {
-            throw new Error(`Not a SleekGrid feature: ${name}`);
-        }
-        if (typeof SleekGrid.prototype[name] !== "function") {
-            throw new Error(`Not a valid SleekGrid feature: ${name}\n`);
-        }
-    },
-
-    before(name, factory) {
-        const advices = this.advices[name] || (this.advices[name] = [SleekGrid.prototype[name]]);
-        if (advices.length === 1) SleekGrid.prototype[name] = function before() {
-            let next = advices.shift();
-            let factory = advices.shift();
-            while (factory) {
-                next = factory(next.bind(this));
-                factory = advices.shift();
-            }
-            SleekGrid.prototype[name] = next;
-            next.apply(this, arguments);
-        };
-        advices.push(factory);
-    },
-
-    after(advice) {
-        const name = advice.name;
-        this.validate(advice, name);
-        if (sourceCode(SleekGrid.prototype[name])) {
-            const chain = SleekGrid.prototype[name];
-            SleekGrid.prototype[name] = function after() {
-                chain.apply(this, arguments);
-                advice.apply(this, arguments);
-            };
-        } else {
-            SleekGrid.prototype[name] = advice;
-        }
-    }
-};

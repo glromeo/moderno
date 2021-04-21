@@ -1,7 +1,8 @@
 import {_ROW_, _ROW_HEADER_, SleekGrid} from "../sleek-grid.js";
 import {createCellSizer, createDragHandler} from "../utility.mjs";
 
-SleekGrid.features.after(function createdCallback() {
+SleekGrid.prototype.resizing = function resizing() {
+
     const sleekGrid = this;
     const {
         classList,
@@ -90,7 +91,7 @@ SleekGrid.features.after(function createdCallback() {
                 for (let nextColumnIndex = columnIndex + 1; nextColumnIndex < columns.length; ++nextColumnIndex) {
                     columns[nextColumnIndex].left += translation;
                 }
-                viewPort.range.resize(translation, 0);
+                sleekGrid.resize({columns});
             }
         };
     }
@@ -146,7 +147,7 @@ SleekGrid.features.after(function createdCallback() {
                 while (nextIndex < rows.length) {
                     rows[nextIndex++].top += translation;
                 }
-                viewPort.range.resize(0, translation);
+                sleekGrid.resize({rows});
             }
         };
     }
@@ -208,7 +209,7 @@ SleekGrid.features.after(function createdCallback() {
 
         column.width = columnWidth;
 
-        viewPort.range.resize(translation, 0);
+        sleekGrid.resize({columns});
     }
 
     function rowFitCallback(event, rowIndex, rowHeight) {
@@ -235,7 +236,7 @@ SleekGrid.features.after(function createdCallback() {
 
         row.height = rowHeight;
 
-        viewPort.range.resize(0, translation);
+        sleekGrid.resize({rows});
     }
 
     // =========================================================================================================
@@ -262,15 +263,21 @@ SleekGrid.features.after(function createdCallback() {
         });
     }
 
-});
+};
 
-SleekGrid.features.after(function connectedCallback() {
+const connectedCallback = SleekGrid.prototype.connectedCallback;
+
+SleekGrid.prototype.connectedCallback = function () {
     this.updateHeaderWidth();
     this.updateHeaderHeight();
-});
+    connectedCallback.apply(this);
+}
 
-SleekGrid.features.after(function disconnectedCallback() {
+const disconnectedCallback = SleekGrid.prototype.disconnectedCallback;
+
+SleekGrid.prototype.disconnectedCallback = function () {
+    disconnectedCallback.apply(this);
     style.setProperty("--header-width", null);
     style.setProperty("--header-height", null);
     style.setProperty("--header-padding", null);
-});
+}

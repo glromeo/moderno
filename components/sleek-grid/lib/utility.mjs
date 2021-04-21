@@ -1,4 +1,93 @@
+import {memoize} from "./nano-memoize.mjs";
 import {cloneCell} from "./templates.js";
+
+export function totalWidth(columns) {
+    const column = columns[columns.length - 1];
+    return column ? column.left + column.width : 0;
+}
+
+export function totalHeight(rows) {
+    const row = rows[rows.length - 1];
+    return row ? row.top + row.height : 0;
+}
+
+export function findColumnIndex(columns, edge) {
+    let middle, distance, start = 0, end = columns.length - 1;
+    while (start < end) {
+        middle = (start + end) >> 1;
+        const {left, width} = columns[middle];
+        distance = edge - left;
+        if (distance >= width) {
+            start = middle + 1; // search to the right
+        } else if (distance < 0) {
+            end = middle - 1; // search to the left
+        } else {
+            return middle;
+        }
+    }
+    return start;
+}
+
+export function findRowIndex(rows, edge) {
+    let middle, distance, start = 0, end = rows.length - 1;
+    while (start < end) {
+        middle = (start + end) >> 1;
+        const {top, height} = rows[middle];
+        distance = edge - top;
+        if (distance >= height) {
+            start = middle + 1; // search to the bottom
+        } else if (distance < 0) {
+            end = middle - 1; // search to the top
+        } else {
+            return middle;
+        }
+    }
+    return start;
+}
+
+export const createFilter = memoize((filterId, columns, external) => {
+    const filters = [];
+    const body = columns.reduce((code, {name, search}, index) => {
+        if (search) {
+            const filter = new RegExp("^" + escapeRegex(search).replace(/\\\*/g, ".*"), "i");
+            filters.push(filter);
+            const field = JSON.stringify(name);
+            return code + `\n&& this[${filters.length - 1}].test(row[${field}]) // [${index}] ${field} ${filter}`;
+        } else {
+            return code;
+        }
+    }, "row.index = index;\nreturn true") + "\n" + sourceURL("filter", `sleek-grid[grid-id="${filterId}"]`);
+    if (filters.length > 0) {
+        return new Function("row", "index", body).bind(filters);
+    }
+});
+
+export const applyFilter = memoize((filter, rows) => {
+    if (filter) {
+        rows = rows.filter(filter);
+    } else {
+        if (rows[0] && rows[0].index === undefined) {
+            for (let index = 0; index < rows.length; index++) {
+                rows[index].index = index;
+            }
+        }
+    }
+    return rows;
+});
+
+export const applySort = memoize((columns, rows) => {
+    let column = columns.find(column => column.sort);
+    if (column) {
+        let sorting = column.sort === "asc" ? 1 : -1;
+        const name = column.name;
+        return [...rows].sort(function (leftRow, rightRow) {
+            const leftCell = leftRow[name];
+            const rightCell = rightRow[name];
+            return leftCell === rightCell ? 0 : leftCell < rightCell ? -sorting : sorting;
+        });
+    }
+    return rows;
+});
 
 export function textWidth(text) {
     return text ? String(text).length * 12.5 : 20;
@@ -39,7 +128,7 @@ export function calculateScrollbarDimensions() {
 const REGEX_SPECIAL_CHARS = /([-*+?.^${}(|)[\]])/g;
 
 export function escapeRegex(str) {
-    return str.replace(REGEX_SPECIAL_CHARS, '\\$1');
+    return str.replace(REGEX_SPECIAL_CHARS, "\\$1");
 }
 
 let dragAnimationFrame;
@@ -71,7 +160,7 @@ export function createDragHandler(triggerHandler) {
         };
         document.body.addEventListener("pointermove", mouseDragHandler);
         document.body.addEventListener("mouseup", mouseDragHandler);
-    }
+    };
 }
 
 export function childIndex(children, node) {
@@ -97,7 +186,7 @@ export function createCellSizer({stub}) {
     return function (column, row) {
         textElement.innerText = row[column.name];
         return textElement;
-    }
+    };
 }
 
 export function parametersList(fn) {

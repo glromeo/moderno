@@ -1,7 +1,6 @@
-import {SleekGrid} from "../sleek-grid.js";
 import {textWidth} from "../utility.mjs";
 
-function importColumns(columns, columnWidth) {
+export function importColumns(columns, columnWidth) {
     const imported = new Array(columns.length);
     let left = 0, index = 0;
     while (index < columns.length) {
@@ -17,7 +16,7 @@ function importColumns(columns, columnWidth) {
     return imported;
 }
 
-function importRows(rows, rowHeight) {
+export function importRows(rows, rowHeight) {
     const imported = new Array(rows.length);
     let top = 0, index = 0;
     while (index < rows.length) {
@@ -33,7 +32,7 @@ function importRows(rows, rowHeight) {
     return imported;
 }
 
-function autosizeColumns({mode, columns, rows, viewPort}) {
+export function autosizeColumns({mode, columns, rows, viewPort}) {
     if (mode === "quick") {
         return function quickTextWidth({label, name}) {
             let width = textWidth(label);
@@ -48,17 +47,6 @@ function autosizeColumns({mode, columns, rows, viewPort}) {
     }
 }
 
-function autosizeRows(properties) {
+export function autosizeRows(properties) {
     return () => 32;
 }
-
-SleekGrid.features.before("render", next => function autosize(props) {
-
-    if (props.columns[0]?.left === undefined || props.rows[0]?.top === undefined) {
-        const args = {mode: this.autosize, ...props, ...this.viewPort.getBoundingClientRect()};
-        props.columns = importColumns(props.columns, autosizeColumns(args));
-        props.rows = importRows(props.rows, autosizeRows(args));
-    }
-
-    next(props);
-});

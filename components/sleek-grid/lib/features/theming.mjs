@@ -1,6 +1,6 @@
 import {SleekGrid} from "../sleek-grid.js";
 
-SleekGrid.features.after(function createdCallback() {
+SleekGrid.prototype.theming = function theming() {
     const {style} = this;
 
     const theme = this.getAttribute("theme") || "light";
@@ -46,5 +46,5 @@ SleekGrid.features.after(function createdCallback() {
             style.setProperty("--odd-rows-background", theme.oddRowsBackground);
         }
     }
-});
+};
 

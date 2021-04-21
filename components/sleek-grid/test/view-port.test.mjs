@@ -1,5 +1,4 @@
 import {importColumns, importRows} from "../lib/utility.mjs";
-import {ViewPortModel} from "../lib/view-port.mjs";
 
 describe("view-port", function () {
 
