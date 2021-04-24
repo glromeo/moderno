@@ -1,7 +1,6 @@
 export const sleekStyle = new CSSStyleSheet();
 
 sleekStyle.replaceSync(`
-    
     :host {
         --padding: 8px;
         color: var(--text-color)
@@ -10,7 +9,7 @@ sleekStyle.replaceSync(`
     #view-port {
         background-color: var(--background-color);
     }
-
+    
     #stub-hide-right {
         position: absolute;
         display: block;
@@ -30,11 +29,11 @@ sleekStyle.replaceSync(`
         box-shadow: -3px 1px 3px var(--background-color);
         border-right: 1px solid var(--border-color);
     }
-
+    
     #stub .handle.hz {
         margin-top: -1px; /* because it's the second float */
     }
-
+    
     #top-header {
         box-shadow: 1px 0 3px var(--shadow-color);
     }
@@ -42,7 +41,7 @@ sleekStyle.replaceSync(`
     #left-header {
         box-shadow: 0 1px 3px var(--shadow-color);
     }
-
+    
     .header {
         background: var(--background-color);
     }
@@ -51,7 +50,7 @@ sleekStyle.replaceSync(`
     .header .cell .active {
         color: var(--border-color-active);
     }
-
+    
     .handle {
         background-color: var(--border-color);
     }
@@ -60,7 +59,7 @@ sleekStyle.replaceSync(`
     .handle.active {
         background-color: var(--border-color-active);
     }
-
+    
     .row.even {
         background-color: var(--even-rows-background);
     }
@@ -68,7 +67,7 @@ sleekStyle.replaceSync(`
     .row.odd {
         background-color: var(--odd-rows-background);
     }
-
+    
     .search-input {
         position: absolute;
         bottom: 0;
@@ -152,12 +151,12 @@ sleekStyle.replaceSync(`
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-
+    
     .cell-content {
         position: relative;
         height: 100%;
     }
-
+    
     .cell svg {
         height: 1.25em;
     }
@@ -198,7 +197,7 @@ sleekStyle.replaceSync(`
     .cell[search] .search-icon {
         opacity: 1;
     }
-
+    
     .search-input:focus ~ .search-icon,
     .search-input:valid ~ .search-icon {
         opacity: 1;
@@ -213,21 +212,78 @@ sleekStyle.replaceSync(`
         opacity: 0;
         transform: translateY(0);
     }
+    
     .rendering .leave {
         opacity: 0;
         transform: translateX(10000);
         transition: opacity 300ms ease, transform 300ms ease;
     }
-
+    
+    .animate .cell {
+        transition: left 600ms ease-in-out, width 600ms ease-in-out;
+    }
+    
     .animate .row {
         transition: transform 300ms ease-in-out;
+    }
+    
+    .animate .row.even .cell {
+        background-color: var(--even-rows-background);
+    }
+    
+    .animate .row.odd .cell {
+        background-color: var(--odd-rows-background);
+    }
+    
+    #highlight {
+        position: absolute;
+        opacity: 0;
+        left: 0;
+        top: 0;
+        box-shadow: 0px 0px 0px 2px gold;
+        z-index: 1000 !important;
+        pointer-events: none;
+        transition: opacity 0.3s ease-in-out, transform 120ms ease-out, width 120ms ease-out, height 120ms ease-out;
+        background-color: rgba(255, 215, 0, 0.33);
+    }
+    
+    #highlight.visible {
+        opacity: .66;
+    }
+    
+    #drop-zone {
+        position: absolute;
+        opacity: 0;
+        left: 0;
+        top: 0;
+        box-shadow: 0px 0px 0px 2px cornflowerblue;
+        z-index: 1000 !important;
+        pointer-events: none;
+        transition: opacity 0.3s ease-in-out, transform 120ms ease-out, width 120ms ease-out, height 120ms ease-out;
+        background-color: rgba(100, 149, 237, 0.33);
+    }
+    
+    #drop-zone.visible {
+        opacity: .66;
+    }
+    
+    #ghost {
+        position: fixed;
+        pointer-events: none;
+        height: var(--header-height);
+        z-index: 2000 !important;
+        box-shadow: 0px 0px 0px 2px cornflowerblue, 3px 6px 12px rgba(0, 0, 0, .1), -3px 6px 12px rgba(0, 0, 0, .5);
+    }
+    
+    #top-header.dnd * {
+        cursor: grab;
     }
     
     .cell.hidden {
         width: 0;
         transition: width 300ms ease-in-out;
     }
-
+    
     .hidden .cell-text {
         opacity: 0;
         transition: opacity 300ms ease-in-out;

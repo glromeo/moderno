@@ -91,6 +91,8 @@ staticStyle.replaceSync(`
     #sheet{
         position: absolute;
         left: var(--header-width);
+        width: 100%;
+        height: 100%;
     }
     
     .cell {

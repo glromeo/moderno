@@ -147,7 +147,7 @@ export function createDragHandler(triggerHandler) {
             if (dragEvent.buttons !== 1) {
                 handle.classList.remove("active");
                 document.body.removeEventListener("pointermove", mouseDragHandler);
-                document.body.removeEventListener("mouseup", mouseDragHandler);
+                document.body.removeEventListener("pointerup", mouseDragHandler);
                 dragAnimationFrame = requestAnimationFrame(function () {
                     dragHandler(dragEvent);
                     dragHandler({});
@@ -159,7 +159,7 @@ export function createDragHandler(triggerHandler) {
             }
         };
         document.body.addEventListener("pointermove", mouseDragHandler);
-        document.body.addEventListener("mouseup", mouseDragHandler);
+        document.body.addEventListener("pointerup", mouseDragHandler);
     };
 }
 

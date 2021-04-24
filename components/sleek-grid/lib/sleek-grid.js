@@ -1,7 +1,7 @@
 import {autosizeColumns, autosizeRows, importColumns, importRows} from "./features/autosizing.mjs";
 import {sleekStyle} from "./styles/sleek.js";
 import {staticStyle} from "./styles/static.js";
-import {cloneCell, cloneColumnHeader, cloneGridTemplate, cloneRow, cloneRowHeader} from "./templates.js";
+import {cloneCell, cloneGridTemplate, cloneLeftHeaderCell, cloneRow, cloneTopHeaderCell} from "./templates.js";
 import {
     applyFilter,
     applySort,
@@ -41,8 +41,8 @@ export class SleekGrid extends HTMLElement {
         this.stub = this.shadowRoot.getElementById("stub");
         this.viewPort = this.shadowRoot.getElementById("view-port");
         this.scrollArea = this.shadowRoot.getElementById("scroll-area");
-        this.columnHeader = this.shadowRoot.getElementById("top-header");
-        this.rowHeader = this.shadowRoot.getElementById("left-header");
+        this.topHeader = this.shadowRoot.getElementById("top-header");
+        this.leftHeader = this.shadowRoot.getElementById("left-header");
         this.sheet = this.shadowRoot.getElementById("sheet");
 
         this.pendingUpdate = undefined;
@@ -68,6 +68,7 @@ export class SleekGrid extends HTMLElement {
     features() {
         this?.theming();
         this?.resizing();
+        this?.dragndrop();
     }
 
     // =========================================================================================================
@@ -191,15 +192,14 @@ export class SleekGrid extends HTMLElement {
         };
     }
 
-    replaceGridStyle({columns, rows, topIndex, bottomIndex, leftIndex, rightIndex} = this) {
-        let style = "";
+    replaceGridStyle({columns, rows, topIndex, bottomIndex, leftIndex, rightIndex} = this, style = "") {
         for (let columnIndex = leftIndex; columnIndex < rightIndex; ++columnIndex) {
             const {left, width} = columns[columnIndex];
-            style += `.c-${columnIndex}{left:${left}px;width:${width}px;}\n`;
+            style += `.c-${columnIndex}{left:${left}px;width:${width}px}\n`;
         }
         for (let rowIndex = topIndex; rowIndex < bottomIndex; ++rowIndex) {
             const {top, height} = rows[rowIndex];
-            style += `.r-${rowIndex}{transform:translateY(${top}px);height:${height}px;}\n`;
+            style += `.r-${rowIndex}{transform:translateY(${top}px);height:${height}px}\n`;
         }
         this.gridStyle.replace(style);
     }
@@ -215,28 +215,28 @@ export class SleekGrid extends HTMLElement {
         Object.assign(this, properties);
 
         let columnIndex = this.leftIndex;
-        let columnHeaderCell = this.columnHeader.firstChild;
-        while (columnIndex < this.rightIndex && columnHeaderCell) {
-            this.createColumnHeader(columnIndex++, columnHeaderCell);
-            columnHeaderCell = columnHeaderCell.nextSibling;
+        let topHeaderCell = this.topHeader.firstChild;
+        while (columnIndex < this.rightIndex && topHeaderCell) {
+            this.useTopHeaderCell(columnIndex++, topHeaderCell);
+            topHeaderCell = topHeaderCell.nextSibling;
         }
-        if (columnHeaderCell) do {
-        } while (columnHeaderCell !== this.columnHeader.removeChild(this.columnHeader.lastChild));
+        if (topHeaderCell) do {
+        } while (topHeaderCell !== this.topHeader.removeChild(this.topHeader.lastChild));
         while (columnIndex < this.rightIndex) {
-            this.columnHeader.appendChild(this.createColumnHeader(columnIndex++, columnHeaderCell));
+            this.topHeader.appendChild(this.useTopHeaderCell(columnIndex++, topHeaderCell));
         }
 
         for (let rowIndex = this.topIndex; rowIndex < this.bottomIndex; ++rowIndex) {
             const row = this.rows[rowIndex];
-            const key = row.index ?? rowIndex;
+            const key = row.rowIndex ?? rowIndex;
             const recycled = recycle.get(key);
             if (recycled) {
                 recycle.delete(key);
-                row[_ROW_HEADER_] = this.createRowHeader(rowIndex, recycled[_ROW_HEADER_]);
-                row[_ROW_] = this.createRow(rowIndex, this.leftIndex, this.rightIndex, recycled[_ROW_]);
+                row[_ROW_HEADER_] = this.useLeftHeaderCell(rowIndex, recycled[_ROW_HEADER_]);
+                row[_ROW_] = this.useRow(rowIndex, this.leftIndex, this.rightIndex, recycled[_ROW_]);
             } else {
-                row[_ROW_HEADER_] = this.rowHeader.appendChild(this.createRowHeader(rowIndex));
-                row[_ROW_] = this.sheet.appendChild(this.createRow(rowIndex, this.leftIndex, this.rightIndex));
+                row[_ROW_HEADER_] = this.leftHeader.appendChild(this.useLeftHeaderCell(rowIndex));
+                row[_ROW_] = this.sheet.appendChild(this.useRow(rowIndex, this.leftIndex, this.rightIndex));
                 row[_ROW_HEADER_].classList.add("enter");
                 row[_ROW_].classList.add("enter");
             }
@@ -311,8 +311,8 @@ export class SleekGrid extends HTMLElement {
         let leaveIndex = leaveIndexStart;
         let enterIndex = enterIndexStart;
         while (enterIndex < enterIndexEnd && leaveIndex < leaveIndexEnd) {
-            rows[enterIndex][_ROW_HEADER_] = this.createRowHeader(enterIndex, rows[leaveIndex][_ROW_HEADER_]);
-            rows[enterIndex][_ROW_] = this.createRow(enterIndex, leftIndex, rightIndex, rows[leaveIndex][_ROW_]);
+            rows[enterIndex][_ROW_HEADER_] = this.useLeftHeaderCell(enterIndex, rows[leaveIndex][_ROW_HEADER_]);
+            rows[enterIndex][_ROW_] = this.useRow(enterIndex, leftIndex, rightIndex, rows[leaveIndex][_ROW_]);
             rows[leaveIndex][_ROW_HEADER_] = undefined;
             rows[leaveIndex][_ROW_] = undefined;
             ++enterIndex;
@@ -326,66 +326,66 @@ export class SleekGrid extends HTMLElement {
             ++leaveIndex;
         }
         while (enterIndex < enterIndexEnd) {
-            rows[enterIndex][_ROW_HEADER_] = this.rowHeader.appendChild(this.createRowHeader(enterIndex));
-            rows[enterIndex][_ROW_] = this.sheet.appendChild(this.createRow(enterIndex, leftIndex, rightIndex));
+            rows[enterIndex][_ROW_HEADER_] = this.leftHeader.appendChild(this.useLeftHeaderCell(enterIndex));
+            rows[enterIndex][_ROW_] = this.sheet.appendChild(this.useRow(enterIndex, leftIndex, rightIndex));
             ++enterIndex;
         }
     }
 
     goRight(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, topIndex, bottomIndex) {
-        const {columnHeader, rows} = this;
+        const {topHeader, rows} = this;
         let enterIndex = enterIndexStart;
         let leaveIndex = leaveIndexStart;
         while (enterIndex < enterIndexEnd && leaveIndex++ < leaveIndexEnd) {
-            columnHeader.appendChild(this.createColumnHeader(enterIndex++, columnHeader.firstChild));
+            topHeader.appendChild(this.useTopHeaderCell(enterIndex++, topHeader.firstChild));
         }
         while (leaveIndex++ < leaveIndexEnd) {
-            columnHeader.firstChild.remove();
+            topHeader.firstChild.remove();
         }
         while (enterIndex < enterIndexEnd) {
-            columnHeader.appendChild(this.createColumnHeader(enterIndex++));
+            topHeader.appendChild(this.useTopHeaderCell(enterIndex++));
         }
         for (let rowIndex = topIndex, rowElement; rowIndex < bottomIndex; ++rowIndex) {
             rowElement = rows[rowIndex][_ROW_];
             enterIndex = enterIndexStart;
             leaveIndex = leaveIndexStart;
             while (enterIndex < enterIndexEnd && leaveIndex++ < leaveIndexEnd) {
-                rowElement.appendChild(this.createCell(enterIndex++, rowIndex, rowElement.firstChild));
+                rowElement.appendChild(this.useCell(enterIndex++, rowIndex, rowElement.firstChild));
             }
             while (leaveIndex++ < leaveIndexEnd) {
                 rowElement.firstChild.remove();
             }
             while (enterIndex < enterIndexEnd) {
-                rowElement.appendChild(this.createCell(enterIndex++, rowIndex));
+                rowElement.appendChild(this.useCell(enterIndex++, rowIndex));
             }
         }
     }
 
     goLeft(enterIndexStart, enterIndexEnd, leaveIndexStart, leaveIndexEnd, topIndex, bottomIndex) {
-        const {columnHeader, rows} = this;
+        const {topHeader, rows} = this;
         let enterIndex = enterIndexEnd;
         let leaveIndex = leaveIndexEnd;
         while (--enterIndex >= enterIndexStart && --leaveIndex >= leaveIndexStart) {
-            columnHeader.insertBefore(this.createColumnHeader(enterIndex, columnHeader.lastChild), columnHeader.firstChild);
+            topHeader.insertBefore(this.useTopHeaderCell(enterIndex, topHeader.lastChild), topHeader.firstChild);
         }
         while (--leaveIndex >= leaveIndexStart) {
-            columnHeader.lastChild.remove();
+            topHeader.lastChild.remove();
         }
         while (enterIndex >= enterIndexStart) {
-            columnHeader.insertBefore(this.createColumnHeader(enterIndex--), columnHeader.firstChild);
+            topHeader.insertBefore(this.useTopHeaderCell(enterIndex--), topHeader.firstChild);
         }
         for (let rowIndex = topIndex, rowElement; rowIndex < bottomIndex; ++rowIndex) {
             rowElement = rows[rowIndex][_ROW_];
             enterIndex = enterIndexEnd;
             leaveIndex = leaveIndexEnd;
             while (--enterIndex >= enterIndexStart && --leaveIndex >= leaveIndexStart) {
-                rowElement.insertBefore(this.createCell(enterIndex, rowIndex, rowElement.lastChild), rowElement.firstChild);
+                rowElement.insertBefore(this.useCell(enterIndex, rowIndex, rowElement.lastChild), rowElement.firstChild);
             }
             while (--leaveIndex >= leaveIndexStart) {
                 rowElement.lastChild.remove();
             }
             while (enterIndex >= enterIndexStart) {
-                rowElement.insertBefore(this.createCell(enterIndex--, rowIndex), rowElement.firstChild);
+                rowElement.insertBefore(this.useCell(enterIndex--, rowIndex), rowElement.firstChild);
             }
         }
     }
@@ -394,7 +394,7 @@ export class SleekGrid extends HTMLElement {
 
     columnContext(event) {
         const header = event.target.closest(".ch");
-        const index = header.index;
+        const index = header.columnIndex;
         const column = this.columns[index];
         return {
             header,
@@ -403,17 +403,20 @@ export class SleekGrid extends HTMLElement {
         };
     }
 
-    createColumnHeader(columnIndex, recycled) {
-        const columnHeader = recycled || cloneColumnHeader(this);
-        columnHeader.render(columnIndex);
+    useTopHeaderCell(columnIndex, recycled) {
+        const topHeaderCell = recycled || cloneTopHeaderCell(this);
+        topHeaderCell.render(columnIndex);
         if (!recycled) {
-            this.columnHeaderCallback(columnHeader);
+            this.onTopHeaderCell(topHeaderCell);
         }
-        return columnHeader;
+        return topHeaderCell;
     }
 
-    columnHeaderCallback(columnHeader) {
-        const searchInput = columnHeader.lastChild.firstChild;
+    onTopHeaderCell(cell) {
+        cell.lastChild.addEventListener("pointerenter", this.onEnterTopHeaderCell, {capture:true});
+        cell.lastChild.addEventListener("pointerleave", this.onLeaveTopHeaderCell, {capture:true});
+
+        const searchInput = cell.lastChild.firstChild;
         const searchLabel = searchInput.nextSibling.nextSibling;
         const searchIcon = searchLabel.nextSibling;
 
@@ -428,7 +431,7 @@ export class SleekGrid extends HTMLElement {
             this.properties.columns[index].search = searchInput.value;
             this.requestUpdate({columns: [...this.properties.columns]});
         });
-        searchIcon.addEventListener("mousedown", (event) => {
+        searchIcon.addEventListener("pointerdown", (event) => {
             if (focused) {
                 event.target.focus();
             } else {
@@ -446,7 +449,7 @@ export class SleekGrid extends HTMLElement {
 
         const sortIcon = searchLabel.lastChild;
 
-        sortIcon.addEventListener("mousedown", event => {
+        sortIcon.addEventListener("pointerdown", event => {
             event.preventDefault();
             event.stopPropagation();
         });
@@ -467,28 +470,103 @@ export class SleekGrid extends HTMLElement {
         });
     }
 
-    createRowHeader(rowIndex, recycled) {
-        const rowHeader = recycled || cloneRowHeader(this);
-        rowHeader.render(rowIndex);
+    onEnterTopHeaderCell(cell) {
+
+    }
+
+    onLeaveTopHeaderCell(cell) {
+
+    }
+
+    useLeftHeaderCell(rowIndex, recycled) {
+        const leftHeaderCell = recycled || cloneLeftHeaderCell(this);
+        leftHeaderCell.render(rowIndex);
         if (!recycled) {
-            this.rowHeaderCallback(rowHeader);
+            this.onLeftHeaderCell(leftHeaderCell);
         }
-        return rowHeader;
+        return leftHeaderCell;
     }
 
-    rowHeaderCallback(rowHeader) {
+    onLeftHeaderCell(cell) {
+        cell.lastChild.addEventListener("pointerenter", this.onEnterLeftHeaderCell, {capture:true});
+        cell.lastChild.addEventListener("pointerleave", this.onLeaveLeftHeaderCell, {capture:true});
     }
 
-    createCell(columnIndex, rowIndex, recycled) {
+    onEnterLeftHeaderCell(cell) {
+
+    }
+
+    onLeaveLeftHeaderCell(cell) {
+
+    }
+
+    useCell(columnIndex, rowIndex, recycled) {
         const cellElement = recycled || cloneCell(this);
         cellElement.render(columnIndex, rowIndex);
+        if (!recycled) {
+            this.onCell(cellElement);
+        }
         return cellElement;
     }
 
-    createRow(rowIndex, leftIndex, rightIndex, recycled) {
-        const row = recycled || cloneRow(this);
-        row.render(rowIndex, leftIndex, rightIndex);
-        return row;
+    onCell(cell) {
+        cell.lastChild.addEventListener("pointerenter", this.onEnterCell, {capture:true});
+        cell.lastChild.addEventListener("pointerleave", this.onLeaveCell, {capture:true});
     }
 
+    onEnterCell(cell) {
+
+    }
+
+    onLeaveCell(cell) {
+
+    }
+
+    useRow(rowIndex, leftIndex, rightIndex, recycled) {
+        const rowElement = recycled || cloneRow(this);
+        rowElement.render(rowIndex, leftIndex, rightIndex);
+        return rowElement;
+    }
+
+    swap(leftIndex, rightIndex) {
+
+        if (leftIndex === rightIndex) {
+            return
+        } else if (leftIndex > rightIndex) {
+            const smaller = rightIndex;
+            rightIndex = leftIndex;
+            leftIndex = smaller;
+        }
+
+        const diff = this.columns[rightIndex].width - this.columns[leftIndex].width;
+
+        const left = this.columns[leftIndex].left;
+        const right = this.columns[rightIndex].left + diff;
+        this.columns[leftIndex].left = right;
+        this.columns[rightIndex].left = left;
+
+        for (let columnIndex = leftIndex+1; columnIndex < rightIndex; columnIndex++) {
+            this.columns[columnIndex].left += diff;
+        }
+
+        this.viewPort.classList.add("animate");
+
+        this.replaceGridStyle(this, `
+             .cell.c-${leftIndex},
+             .cell.c-${leftIndex+1},
+             .cell.c-${rightIndex},
+             .cell.c-${rightIndex+1}{
+                border-left: 1px solid var(--border-color);
+                margin-left: -1px;
+            }
+        `);
+
+        setTimeout(()=>{
+            this.viewPort.classList.remove("animate");
+            const c = this.properties.columns[leftIndex];
+            this.properties.columns[leftIndex] = this.properties.columns[rightIndex];
+            this.properties.columns[rightIndex] = c;
+            this.requestUpdate({columns:[...this.properties.columns]});
+        }, 600);
+    }
 }

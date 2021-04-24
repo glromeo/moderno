@@ -119,8 +119,8 @@
 
             var headerElement = gridElement.firstElementChild;
             var stubElement = headerElement.firstElementChild;
-            var columnHeaderElement = headerElement.children[1].firstElementChild;
-            var rowHeaderElement = headerElement.children[2].firstElementChild;
+            var topHeaderElement = headerElement.children[1].firstElementChild;
+            var leftHeaderElement = headerElement.children[2].firstElementChild;
             var scrollAreaElement = headerElement.nextElementSibling;
             var sheetElement = scrollAreaElement.firstElementChild;
 
@@ -156,7 +156,7 @@
             var clientWidth = scrollAreaElement.clientWidth;
             var clientHeight = scrollAreaElement.clientHeight;
 
-            function createColumnHeaderCell(columnIndex) {
+            function createTopHeaderCellCell(columnIndex) {
                 var cellElement = topPool.lastElementChild || stubElement.cloneNode(false);
                 cellElement.replaceChildren(columnIndex);
                 cellElement.style.width = (columns[columnIndex].width - 1) + "px";
@@ -168,7 +168,7 @@
                 return cellElement;
             }
 
-            function createRowHeaderCell(rowIndex) {
+            function createLeftHeaderCell(rowIndex) {
                 var cellElement = leftPool.lastElementChild || stubElement.cloneNode(false);
                 cellElement.replaceChildren(rowIndex);
                 cellElement.style.height = (rows[rowIndex].height - 1) + "px";
@@ -180,8 +180,8 @@
                 return cellElement;
             }
 
-            columnHeaderElement.style.width = sheetElement.style.width = sheet.width + 'px';
-            rowHeaderElement.style.height = sheetElement.style.height = sheet.height + 'px';
+            topHeaderElement.style.width = sheetElement.style.width = sheet.width + 'px';
+            leftHeaderElement.style.height = sheetElement.style.height = sheet.height + 'px';
 
             var topIndex = 0,
                 leftIndex = 0;
@@ -218,14 +218,14 @@
 
 
             for (var c = leftIndex, rasterX = 0; rasterX < clientWidth + H_SCROLL_BUFFER_PX; c++) {
-                var cell = positionHorizontally(createColumnHeaderCell(c), rasterX);
-                columnHeaderElement.appendChild(cell);
+                var cell = positionHorizontally(createTopHeaderCellCell(c), rasterX);
+                topHeaderElement.appendChild(cell);
                 rasterX += columns[c].width;
             }
 
             for (var r = topIndex, rasterY = 0; rasterY < clientHeight + V_SCROLL_BUFFER_PX; r++) {
-                var cell = positionVertically(createRowHeaderCell(r), rasterY);
-                rowHeaderElement.appendChild(cell);
+                var cell = positionVertically(createLeftHeaderCell(r), rasterY);
+                leftHeaderElement.appendChild(cell);
                 rasterY += rows[r].height;
             }
 
@@ -269,14 +269,14 @@
                 scrollLeft = scrollAreaElement.scrollLeft;
 
                 if (offsetX) {
-                    columnHeaderElement.parentNode.scrollLeft = scrollAreaElement.scrollLeft;
+                    topHeaderElement.parentNode.scrollLeft = scrollAreaElement.scrollLeft;
                 }
 
                 var offsetY = scrollAreaElement.scrollTop - scrollTop;
                 scrollTop = scrollAreaElement.scrollTop;
 
                 if (offsetY) {
-                    rowHeaderElement.parentNode.scrollTop = scrollAreaElement.scrollTop;
+                    leftHeaderElement.parentNode.scrollTop = scrollAreaElement.scrollTop;
                 }
 
                 var visibleLeft = scrollLeft - H_SCROLL_BUFFER_PX,
@@ -288,28 +288,28 @@
                 // LEAVE
                 // =========================================================================================================
 
-                while (rowHeaderElement.childElementCount > 0 && topIndex < rows.length && (renderedTop + rows[topIndex].height < visibleTop)) {
+                while (leftHeaderElement.childElementCount > 0 && topIndex < rows.length && (renderedTop + rows[topIndex].height < visibleTop)) {
 
-                    leftPool.appendChild(rowHeaderElement.firstChild);
+                    leftPool.appendChild(leftHeaderElement.firstChild);
 
                     var shifted = visibleRows.shift();
                     pool.append(...shifted);
 
                     renderedTop += rows[topIndex++].height;
                 }
-                while (rowHeaderElement.childElementCount > 0 && bottomIndex > 0 && (renderedBottom - rows[bottomIndex - 1].height > visibleBottom)) {
+                while (leftHeaderElement.childElementCount > 0 && bottomIndex > 0 && (renderedBottom - rows[bottomIndex - 1].height > visibleBottom)) {
 
                     renderedBottom -= rows[--bottomIndex].height;
 
-                    leftPool.appendChild(rowHeaderElement.lastChild);
+                    leftPool.appendChild(leftHeaderElement.lastChild);
 
                     var popped = visibleRows.pop();
                     pool.append(...popped);
                 }
 
-                while (columnHeaderElement.childElementCount > 0 && leftIndex < columns.length && (renderedLeft + columns[leftIndex].width < visibleLeft)) {
+                while (topHeaderElement.childElementCount > 0 && leftIndex < columns.length && (renderedLeft + columns[leftIndex].width < visibleLeft)) {
 
-                    topPool.appendChild(columnHeaderElement.firstChild);
+                    topPool.appendChild(topHeaderElement.firstChild);
 
                     visibleRows.forEach(function (visibleRow) {
                         var shifted = visibleRow.shift();
@@ -318,11 +318,11 @@
 
                     renderedLeft += columns[leftIndex++].width;
                 }
-                while (columnHeaderElement.childElementCount > 0 && rightIndex > 0 && (renderedRight - columns[rightIndex - 1].width > visibleRight)) {
+                while (topHeaderElement.childElementCount > 0 && rightIndex > 0 && (renderedRight - columns[rightIndex - 1].width > visibleRight)) {
 
                     renderedRight -= columns[--rightIndex].width;
 
-                    topPool.appendChild(columnHeaderElement.lastChild);
+                    topPool.appendChild(topHeaderElement.lastChild);
 
                     visibleRows.forEach(function (visibleRow) {
                         var popped = visibleRow.pop();
@@ -337,26 +337,26 @@
                 var enterRightIndex = rightIndex;
                 var enterRight = renderedRight;
                 while (enterRightIndex < columns.length && (enterRight + columns[enterRightIndex].width < visibleRight)) {
-                    columnHeaderElement.appendChild(positionHorizontally(createColumnHeaderCell(enterRightIndex), enterRight));
+                    topHeaderElement.appendChild(positionHorizontally(createTopHeaderCellCell(enterRightIndex), enterRight));
                     enterRight += columns[enterRightIndex++].width;
                 }
                 var enterLeftIndex = leftIndex;
                 var enterLeft = renderedLeft;
                 while (enterLeftIndex > 0 && (enterLeft - columns[enterLeftIndex - 1].width > visibleLeft)) {
                     enterLeft -= columns[--enterLeftIndex].width;
-                    columnHeaderElement.insertBefore(positionHorizontally(createColumnHeaderCell(enterLeftIndex), enterLeft), columnHeaderElement.firstChild);
+                    topHeaderElement.insertBefore(positionHorizontally(createTopHeaderCellCell(enterLeftIndex), enterLeft), topHeaderElement.firstChild);
                 }
                 var enterBottomIndex = bottomIndex;
                 var enterBottom = renderedBottom;
                 while (enterBottomIndex < rows.length && (enterBottom + rows[enterBottomIndex].height < visibleBottom)) {
-                    rowHeaderElement.appendChild(positionVertically(createRowHeaderCell(enterBottomIndex), enterBottom));
+                    leftHeaderElement.appendChild(positionVertically(createLeftHeaderCell(enterBottomIndex), enterBottom));
                     enterBottom += rows[enterBottomIndex++].height;
                 }
                 var enterTopIndex = topIndex;
                 var enterTop = renderedTop;
                 while (enterTopIndex > 0 && (enterTop - rows[enterTopIndex - 1].height > visibleTop)) {
                     enterTop -= rows[--enterTopIndex].height;
-                    rowHeaderElement.insertBefore(positionVertically(createRowHeaderCell(enterTopIndex), enterTop), rowHeaderElement.firstChild);
+                    leftHeaderElement.insertBefore(positionVertically(createLeftHeaderCell(enterTopIndex), enterTop), leftHeaderElement.firstChild);
                 }
 
                 while (rightIndex < enterRightIndex) {
@@ -419,9 +419,9 @@
 
                 var debugModel = [];
 
-                for (var r = 0; r < rowHeaderElement.childElementCount; r++) {
+                for (var r = 0; r < leftHeaderElement.childElementCount; r++) {
                     var row = [];
-                    for (var c = 0; c < columnHeaderElement.childElementCount; c++) {
+                    for (var c = 0; c < topHeaderElement.childElementCount; c++) {
                         row.push(((visibleRows[r] || ['n/a R'])[c]) || 'n/a C');
                     }
                     debugModel.push(row);

@@ -2,17 +2,17 @@
 export default function (sleekGrid) {
 
     const {
-        createTopHeaderCell,
+        createTopHeaderCellCell,
         updateHeaderHeight,
         properties,
         render,
     } = sleekGrid;
 
-    sleekGrid.createTopHeaderCell = function (columnIndex, recycled) {
+    sleekGrid.createTopHeaderCellCell = function (columnIndex, recycled) {
 
 
         function getColumn(headerCell) {
-            return sleekGrid.columns[headerCell.index];
+            return sleekGrid.columns[headerCell.columnIndex];
         }
 
         searchLabel.addEventListener("click", (event) => {
@@ -21,7 +21,7 @@ export default function (sleekGrid) {
             if (column.dragging) return;
         }, false);
 
-        searchLabel.addEventListener("mousedown", () => {
+        searchLabel.addEventListener("pointerdown", () => {
 
             // column.dragging = true;
 
@@ -134,7 +134,7 @@ export default function (sleekGrid) {
 
         this.columns.forEach((column, index) => columnIndex = index);
 
-        let innerHTML = createTopHeaderCell(index);
+        let innerHTML = createTopHeaderCellCell(index);
         this.rows.slice(this.topIndex, this.bottomIndex).forEach((row, index) => {
             innerHTML += createCell(column, row);
         });

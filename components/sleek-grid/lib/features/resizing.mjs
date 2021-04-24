@@ -9,12 +9,12 @@ SleekGrid.prototype.resizing = function resizing() {
         style,
         viewPort,
         stub,
-        rowHeader,
+        leftHeader,
         scrollArea,
         sheet
     } = sleekGrid;
 
-    function headerWidthResizeCallback({pageX: initialPageX}) {
+    function headerWidthResizing({pageX: initialPageX}) {
         const initialWidth = stub.clientWidth;
         return ({pageX}) => {
             let width = initialWidth + Math.ceil(pageX - initialPageX);
@@ -31,7 +31,7 @@ SleekGrid.prototype.resizing = function resizing() {
         style.setProperty("--header-width", cssWidth);
     };
 
-    function headerHeightResizeCallback({pageY: initialPageY}) {
+    function headerHeightResizing({pageY: initialPageY}) {
         const initialHeight = stub.clientHeight;
         return ({pageY}) => {
             let height = initialHeight + Math.ceil(pageY - initialPageY);
@@ -50,10 +50,10 @@ SleekGrid.prototype.resizing = function resizing() {
         style.setProperty("--header-padding", `${padding}px`);
     };
 
-    function columnResizeCallback({pageX: initialPageX}, handle) {
+    function columnResizing({pageX: initialPageX}, handle) {
         const {columns} = sleekGrid;
-        const columnHeaderCell = handle.parentElement;
-        const columnIndex = columnHeaderCell.index;
+        const topHeaderCell = handle.parentElement;
+        const columnIndex = topHeaderCell.columnIndex;
         const column = columns[columnIndex];
         let translation;
         return ({pageX}) => {
@@ -71,7 +71,7 @@ SleekGrid.prototype.resizing = function resizing() {
                 if (Math.abs(delta) > 3) {
                     translation = width - column.width;
                     const cssWidth = `${width}px`;
-                    columnHeaderCell.style.width = cssWidth;
+                    topHeaderCell.style.width = cssWidth;
                     for (const {style} of sheet.querySelectorAll(`.c-${columnIndex}`)) {
                         style.width = cssWidth;
                     }
@@ -96,10 +96,10 @@ SleekGrid.prototype.resizing = function resizing() {
         };
     }
 
-    function rowResizeCallback({pageY: initialPageY}, handle) {
+    function rowResizing({pageY: initialPageY}, handle) {
         const {rows} = sleekGrid;
-        const rowHeaderCell = handle.parentElement;
-        const rowIndex = rowHeaderCell.index;
+        const leftHeaderCell = handle.parentElement;
+        const rowIndex = leftHeaderCell.rowIndex;
         const row = rows[rowIndex];
         let translation;
         return ({pageY}) => {
@@ -181,8 +181,9 @@ SleekGrid.prototype.resizing = function resizing() {
             handle.classList.add("active");
             classList.add("busy");
             requestAnimationFrame(() => {
-                const preferredSize = computeSize(headerCell.index);
-                callback(event, headerCell.index, Math.floor(preferredSize));
+                const index = headerCell.columnIndex ?? headerCell.rowIndex;
+                const preferredSize = computeSize(index);
+                callback(event, index, Math.floor(preferredSize));
                 classList.remove("busy");
                 handle.classList.remove("active");
             });
@@ -221,7 +222,7 @@ SleekGrid.prototype.resizing = function resizing() {
         for (const {style} of scrollArea.querySelectorAll(`.r-${rowIndex}`)) {
             style.height = cssHeight;
         }
-        for (const {style, offsetTop} of rowHeader.querySelectorAll(`.r-${rowIndex} ~ .cell`)) {
+        for (const {style, offsetTop} of leftHeader.querySelectorAll(`.r-${rowIndex} ~ .cell`)) {
             style.top = `${offsetTop + translation}px`;
         }
         let rowElement = sheet.querySelector(`.r-${rowIndex}`);
@@ -243,25 +244,31 @@ SleekGrid.prototype.resizing = function resizing() {
     // VIEWPORT LISTENERS
     // =========================================================================================================
 
-    for (const [type, handlers] of Object.entries({
-        mousedown: {
-            "stub handle width-handle": createDragHandler(headerWidthResizeCallback),
-            "stub handle height-handle": createDragHandler(headerHeightResizeCallback),
-            "handle width-handle": createDragHandler(columnResizeCallback),
-            "handle height-handle": createDragHandler(rowResizeCallback)
-        },
-        dblclick: {
-            "handle width-handle": createAutosizeHandler(columnFitCallback, maxWidth),
-            "handle height-handle": createAutosizeHandler(rowFitCallback, maxHeight)
+    const dragHandlers = {
+        "stub handle width-handle": createDragHandler(headerWidthResizing),
+        "stub handle height-handle": createDragHandler(headerHeightResizing),
+        "handle width-handle": createDragHandler(columnResizing),
+        "handle height-handle": createDragHandler(rowResizing)
+    };
+
+    viewPort.addEventListener("pointerdown", event => {
+        const handler = dragHandlers[event.target.className];
+        if (handler) {
+            handler(event);
         }
-    })) {
-        viewPort.addEventListener(type, event => {
-            const handler = handlers[event.target.className];
-            if (handler) {
-                handler(event);
-            }
-        });
-    }
+    });
+
+    const autosizeHandlers = {
+        "handle width-handle": createAutosizeHandler(columnFitCallback, maxWidth),
+        "handle height-handle": createAutosizeHandler(rowFitCallback, maxHeight)
+    };
+
+    viewPort.addEventListener("dblclick", event => {
+        const handler = autosizeHandlers[event.target.className];
+        if (handler) {
+            handler(event);
+        }
+    });
 
 };
 
@@ -271,7 +278,7 @@ SleekGrid.prototype.connectedCallback = function () {
     this.updateHeaderWidth();
     this.updateHeaderHeight();
     connectedCallback.apply(this);
-}
+};
 
 const disconnectedCallback = SleekGrid.prototype.disconnectedCallback;
 
@@ -280,4 +287,4 @@ SleekGrid.prototype.disconnectedCallback = function () {
     style.setProperty("--header-width", null);
     style.setProperty("--header-height", null);
     style.setProperty("--header-padding", null);
-}
+};

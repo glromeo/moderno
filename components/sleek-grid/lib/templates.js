@@ -26,7 +26,7 @@ export const cloneGridTemplate = createTemplate(`
 </div>
 `);
 
-export const cloneColumnHeader = createTemplate(`
+export const cloneTopHeaderCell = createTemplate(`
 <div class="ch cell c-0">
     <div class="handle width-handle"></div>
     <div class="cell-content">
@@ -40,12 +40,10 @@ export const cloneColumnHeader = createTemplate(`
     </div>
 </div>
 `, function render({columns}, columnIndex) {
-    const {label, left, width, search, sort} = columns[columnIndex];
+    const {label, search, sort} = columns[columnIndex];
     const headerContent = this.childNodes[1];
-    this.index = columnIndex;
+    this.columnIndex = columnIndex;
     this.className = `ch cell c-${columnIndex}`;
-    // this.style.left = `${left}px`;
-    // this.style.width = `${width}px`;
     const headerLabel = headerContent.childNodes[2];
     headerLabel.firstChild.replaceWith(label);
     const headerInput = headerContent.childNodes[0];
@@ -64,16 +62,15 @@ export const cloneColumnHeader = createTemplate(`
     }
 });
 
-export const cloneRowHeader = createTemplate(`
+export const cloneLeftHeaderCell = createTemplate(`
 <div class="rh cell r-0">
     <div class="cell-text" value=""></div>
     <div class="handle height-handle"></div>
 </div>
 `, function render({rows}, rowIndex) {
-    const {label, top, height} = rows[rowIndex];
-    this.index = rowIndex;
+    this.rowIndex = rowIndex;
     this.className = `rh cell r-${rowIndex}`;
-    this.firstChild.replaceChildren(label ?? "n/a");
+    this.firstChild.replaceChildren(rows[rowIndex].label ?? "n/a");
 });
 
 export const cloneCell = createTemplate(`
@@ -81,18 +78,18 @@ export const cloneCell = createTemplate(`
     <div class="cell-text"></div>
 </div>
 `, function render({columns, rows}, columnIndex, rowIndex) {
-    const {name, left, width} = columns[columnIndex];
-    const content = rows[rowIndex][name];
+    const content = rows[rowIndex][columns[columnIndex].name];
+    this.columnIndex = columnIndex;
+    this.rowIndex = rowIndex;
     this.className = `cell c-${columnIndex}`;
     this.firstChild.replaceChildren(content ?? "");
 });
 
 export const cloneRow = createTemplate(`
-<div class="row even" row="0"></div>
+<div class="row even"></div>
 `, function render(grid, rowIndex, leftIndex, rightIndex) {
-    const {top, height, index} = grid.rows[rowIndex];
-    this.index = rowIndex;
-    if (index % 2) {
+    this.rowIndex = rowIndex;
+    if (grid.rows[rowIndex].index % 2) {
         this.className = `row odd  r-${rowIndex}`;
     } else {
         this.className = `row even r-${rowIndex}`;
@@ -109,6 +106,7 @@ export const cloneRow = createTemplate(`
     while (columnIndex < rightIndex) {
         const cell = cloneCell(grid);
         cell.render(columnIndex++, rowIndex);
+        grid.onCell(cell);
         this.appendChild(cell);
     }
 });
