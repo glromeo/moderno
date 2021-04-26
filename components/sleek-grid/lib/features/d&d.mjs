@@ -13,15 +13,19 @@ SleekGrid.prototype.dragndrop = function dragndrop() {
     sheet.addEventListener("pointerenter", () => highlight.classList.add("visible"));
     sheet.addEventListener("pointerleave", () => highlight.classList.remove("visible"));
 
-    this.onEnterCell = onEnterCell.bind(this, highlight);
+    this.onEnterCell = function (event) {
+        const cell = event.target.closest(".cell");
+        if (cell.columnIndex !== undefined) {
+            event.stopPropagation();
+            positionOverlay(highlight, cell);
+        }
+    };
 
-    const dropZone = document.createElement("div");
-    dropZone.id = "drop-zone";
-    dropZone.className = "c-0 r-0";
-    dropZone.columnIndex = undefined;
-    shadowRoot.appendChild(dropZone);
-
-    this.onEnterTopHeaderCell = onEnterCell.bind(this, dropZone);
+    const dropzone = document.createElement("div");
+    dropzone.id = "dropzone";
+    dropzone.className = "c-0 r-0";
+    dropzone.columnIndex = undefined;
+    shadowRoot.appendChild(dropzone);
 
     const dragHandlers = {
         "search-label": createDragHandler(columnDragging)
@@ -34,41 +38,130 @@ SleekGrid.prototype.dragndrop = function dragndrop() {
         }
     });
 
-    function columnDragging({pageX: initialX, pageY: initialY}, handle) {
-        topHeader.classList.add("dnd");
-        dropZone.classList.add("visible");
+    function columnDragging({pageX: initialX, pageY: initialY}, handle, stop) {
+
         const topHeaderCell = handle.closest(".cell");
-        const ghost = topHeaderCell.cloneNode(true);
-        const {left, top} = topHeaderCell.getBoundingClientRect();
-        ghost.id = "ghost";
-        ghost.style.cssText = `left:${left - initialX}px;top:${top - initialY - 2}px;transform:translate(${initialX}px,${initialY}px);`;
-        viewPort.appendChild(ghost);
-        return ({pageX, pageY}) => {
-            if (pageX !== undefined) {
-                ghost.style.transform = `translate(${pageX}px, ${pageY}px)`;
-            } else {
-                topHeader.classList.remove("dnd");
-                dropZone.classList.remove("visible");
-                ghost.remove();
-                if (dropZone.columnIndex !== undefined) {
-                    sleekGrid.swap(topHeaderCell.columnIndex, dropZone.columnIndex);
+        const {columns, leftIndex, rightIndex} = sleekGrid;
+
+        const dragIndex = topHeaderCell.columnIndex;
+        const dragColumn = columns[dragIndex];
+
+        let dropIndex = dragIndex;
+
+        const minLeft = columns[leftIndex].left;
+        const maxRight = columns[rightIndex - 1].left + columns[rightIndex - 1].width;
+        const dragX = dragColumn.left - initialX;
+
+        const ghost = createGhostColumn(sleekGrid, dragIndex, topHeaderCell.getBoundingClientRect());
+        viewPort.classList.add("animate");
+        viewPort.querySelectorAll(`.c-${dragIndex}`).forEach(cell => {
+            cell.classList.add("detached");
+        });
+
+        function packLeft(dropX) {
+            let index = leftIndex;
+            let column = columns[index];
+            if (column === dragColumn) {
+                column = columns[++index];
+            }
+            let left = minLeft;
+            while (column && left + column.width < dropX) {
+                column.left = left;
+                left += column.width;
+                column = columns[++index];
+                if (column === dragColumn) {
+                    column = columns[++index];
                 }
-                dropZone.columnIndex = undefined;
+            }
+            dragColumn.left = left;
+            return index;
+        }
+
+        function packRight(dropX) {
+            let index = rightIndex - 1;
+            let column = columns[index];
+            if (column === dragColumn) {
+                column = columns[--index];
+            }
+            let right = maxRight;
+            while (column && right - column.width > dropX) {
+                right -= column.width;
+                column.left = right;
+                column = columns[--index];
+                if (column === dragColumn) {
+                    column = columns[--index];
+                }
+            }
+            right -= dragColumn.width;
+            dragColumn.left = right;
+            return index;
+        }
+
+        return ({pageX, pageY}) => {
+            pageY = Math.max(initialY - 20, Math.min(initialY + 30, pageY));
+            if (pageX !== undefined) {
+                const dropX = Math.max(0, pageX + dragX);
+                if (dropX > dragColumn.left) {
+                    dropIndex = packLeft(dropX);
+                } else if (dropX < dragColumn.left) {
+                    dropIndex = packRight(dropX);
+                }
+                ghost.style.transform = `translate(${(pageX - initialX)}px, ${(pageY - initialY)}px)`;
+                sleekGrid.replaceGridStyle(sleekGrid);
+            } else {
+                viewPort.querySelectorAll(`.c-${dragIndex}`).forEach(cell => {
+                    cell.classList.remove("detached");
+                });
+                viewPort.classList.remove("animate");
+                ghost.dispose();
+
+                if (dropIndex !== dragIndex) {
+                    if (dragIndex < dropIndex) {
+                        --dropIndex;
+                    }
+                    const sorted = [...sleekGrid.properties.columns];
+                    sorted.splice(dropIndex, 0, ...sorted.splice(dragIndex, 1));
+
+                    sleekGrid.requestUpdate({columns: sorted});
+                }
             }
         };
     }
 
-    function onEnterCell(target, event) {
-        const cell = event.target.closest(".cell");
-        if (cell.columnIndex !== undefined) {
-            event.stopPropagation();
-            const {right: viewPortRight, bottom: viewPortBottom} = viewPort.getBoundingClientRect();
-            const {left, top, right, bottom} = cell.getBoundingClientRect();
-            const width = Math.min(right, viewPortRight) - left;
-            const height = Math.min(bottom, viewPortBottom) - top;
-            target.columnIndex = cell.columnIndex;
-            target.rowIndex = cell.rowIndex;
-            target.style.cssText = `transform:translate(${left}px, ${top}px);width:${width - 1}px;height:${height - 1}px`;
-        }
-    };
+    function positionOverlay(target, cell) {
+        const {right: viewPortRight, bottom: viewPortBottom} = viewPort.getBoundingClientRect();
+        const {left, top, right, bottom} = cell.getBoundingClientRect();
+        const width = Math.min(right, viewPortRight) - left;
+        const height = Math.min(bottom, viewPortBottom) - top;
+        target.columnIndex = cell.columnIndex;
+        target.rowIndex = cell.rowIndex;
+        target.style.cssText = `transform:translate(${left}px, ${top}px);width:${width - 1}px;height:${height - 1}px`;
+    }
 };
+
+function createGhostColumn(grid, dragIndex, {left, top, right, bottom}) {
+    const {viewPort, sheet, columns, rows, topIndex, bottomIndex} = grid;
+    const dragColumn = columns[dragIndex];
+    const field = dragColumn.name;
+
+    const ghost = document.createElement("div");
+    ghost.id = "ghost";
+    ghost.style.cssText = `left:${left - 5}px;top:${top - 5}px;width:${right - left - 20}px;height:${viewPort.clientHeight - 20}px;overflow:hidden;`;
+    ghost.innerHTML = `
+        <div class="header">${dragColumn.label}</div>
+        ${rows.slice(topIndex, bottomIndex).map(row => `
+            <div class="${row.index % 2 ? "odd" : "even"} r-${row.index}">${row[field]}</div>    
+        `).join("\n")}
+    `;
+    viewPort.appendChild(ghost);
+    requestAnimationFrame(function () {
+        ghost.style.opacity = "1";
+    });
+    ghost.dispose = function () {
+        ghost.style.opacity = null;
+        ghost.addEventListener("transitionend", function () {
+            ghost.remove();
+        });
+    };
+    return ghost;
+}

@@ -106,7 +106,7 @@ staticStyle.replaceSync(`
     .row {
         position: absolute;
         white-space: nowrap;
-        width: var(--sheet-width);
+        width: 100%;
     }
     
     .handle {

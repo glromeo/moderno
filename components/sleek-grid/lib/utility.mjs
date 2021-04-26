@@ -139,18 +139,15 @@ export function createDragHandler(triggerHandler) {
         triggerEvent.stopPropagation();
         const handle = triggerEvent.target;
         handle.classList.add("active");
-        const dragHandler = triggerHandler(triggerEvent, handle);
+        const dragHandler = triggerHandler(triggerEvent, handle, stop);
         const mouseDragHandler = dragEvent => {
             dragEvent.preventDefault();
             dragEvent.stopPropagation();
             cancelAnimationFrame(dragAnimationFrame);
             if (dragEvent.buttons !== 1) {
-                handle.classList.remove("active");
-                document.body.removeEventListener("pointermove", mouseDragHandler);
-                document.body.removeEventListener("pointerup", mouseDragHandler);
                 dragAnimationFrame = requestAnimationFrame(function () {
                     dragHandler(dragEvent);
-                    dragHandler({});
+                    stop();
                 });
             } else {
                 dragAnimationFrame = requestAnimationFrame(function () {
@@ -160,6 +157,14 @@ export function createDragHandler(triggerHandler) {
         };
         document.body.addEventListener("pointermove", mouseDragHandler);
         document.body.addEventListener("pointerup", mouseDragHandler);
+        function stop() {
+            if (handle.classList.contains("active")) {
+                handle.classList.remove("active");
+                document.body.removeEventListener("pointermove", mouseDragHandler);
+                document.body.removeEventListener("pointerup", mouseDragHandler);
+                dragHandler({});
+            }
+        }
     };
 }
 

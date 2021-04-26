@@ -219,11 +219,19 @@ sleekStyle.replaceSync(`
         transition: opacity 300ms ease, transform 300ms ease;
     }
     
+    .animate #stub-hide-right,
+    .animate #stub-hide-bottom {
+        display: none;
+    }
+    
     .animate .cell {
-        transition: left 600ms ease-in-out, width 600ms ease-in-out;
+        border-left: 1px solid var(--border-color);
+        margin-left: -1px;
+        transition: left 300ms ease-in-out, width 300ms ease-in-out;
     }
     
     .animate .row {
+        background-color: var(--background-color);
         transition: transform 300ms ease-in-out;
     }
     
@@ -243,7 +251,7 @@ sleekStyle.replaceSync(`
         box-shadow: 0px 0px 0px 2px gold;
         z-index: 1000 !important;
         pointer-events: none;
-        transition: opacity 0.3s ease-in-out, transform 120ms ease-out, width 120ms ease-out, height 120ms ease-out;
+        transition: opacity 160ms ease-in-out, transform 160ms ease-out, width 160ms ease-out, height 160ms ease-out;
         background-color: rgba(255, 215, 0, 0.33);
     }
     
@@ -251,34 +259,58 @@ sleekStyle.replaceSync(`
         opacity: .66;
     }
     
-    #drop-zone {
-        position: absolute;
-        opacity: 0;
-        left: 0;
-        top: 0;
-        box-shadow: 0px 0px 0px 2px cornflowerblue;
-        z-index: 1000 !important;
-        pointer-events: none;
-        transition: opacity 0.3s ease-in-out, transform 120ms ease-out, width 120ms ease-out, height 120ms ease-out;
-        background-color: rgba(100, 149, 237, 0.33);
-    }
-    
-    #drop-zone.visible {
-        opacity: .66;
-    }
-    
     #ghost {
+        display: flex;
+        flex-direction: column;
+        cursor: grab;
         position: fixed;
-        pointer-events: none;
-        height: var(--header-height);
         z-index: 2000 !important;
         box-shadow: 0px 0px 0px 2px cornflowerblue, 3px 6px 12px rgba(0, 0, 0, .1), -3px 6px 12px rgba(0, 0, 0, .5);
+        background: var(--background-color);
+        opacity: 0;
+        transition: opacity 0.25s ease-in-out;
     }
     
-    #top-header.dnd * {
-        cursor: grab;
+    #ghost > * {
+        position: relative;
+        padding: var(--padding);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        transform: none;
     }
     
+    #ghost .header {
+        box-shadow: 1px 0 3px var(--shadow-color);
+        z-index: 1000;
+    }
+    
+    #ghost > * {
+        position: relative;
+        padding: var(--padding);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        transform: none;
+    }
+    
+    #ghost > .odd {
+        background-color: var(--odd-rows-background);
+    }
+    #ghost > .even {
+        background-color: var(--even-rows-background);
+    }
+
+    #ghost.cancel {
+        opacity: 0.33;
+        box-shadow: 0px 0px 0px 2px crimson, 3px 6px 12px rgba(0, 0, 0, .1), -3px 6px 12px rgba(0, 0, 0, .5);
+    }
+    
+    .cell.detached {
+        opacity: 0.333;
+        z-index: 1000 !important;
+        pointer-events: none;
+        transition: left 160ms ease-in-out, opacity 160ms ease-in-out;
+    }
+
     .cell.hidden {
         width: 0;
         transition: width 300ms ease-in-out;

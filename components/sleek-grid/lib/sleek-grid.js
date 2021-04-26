@@ -237,29 +237,13 @@ export class SleekGrid extends HTMLElement {
             } else {
                 row[_ROW_HEADER_] = this.leftHeader.appendChild(this.useLeftHeaderCell(rowIndex));
                 row[_ROW_] = this.sheet.appendChild(this.useRow(rowIndex, this.leftIndex, this.rightIndex));
-                row[_ROW_HEADER_].classList.add("enter");
-                row[_ROW_].classList.add("enter");
             }
         }
 
         for (const lastRow of recycle.values()) {
-            lastRow[_ROW_HEADER_].classList.add("leave");
-            lastRow[_ROW_].classList.add("leave");
+            lastRow[_ROW_HEADER_].remove();
+            lastRow[_ROW_].remove();
         }
-
-        requestAnimationFrame(() => {
-            for (const entered of this.scrollArea.querySelectorAll(".enter")) {
-                entered.classList.remove("enter");
-            }
-        });
-
-        this.scrollArea.classList.add("rendering");
-        setTimeout(() => {
-            this.scrollArea.classList.remove("rendering");
-            for (const left of this.scrollArea.querySelectorAll(".leave")) {
-                left.remove();
-            }
-        }, 0);
     }
 
     scrollTo(x, y) {
@@ -567,6 +551,6 @@ export class SleekGrid extends HTMLElement {
             this.properties.columns[leftIndex] = this.properties.columns[rightIndex];
             this.properties.columns[rightIndex] = c;
             this.requestUpdate({columns:[...this.properties.columns]});
-        }, 600);
+        }, 300);
     }
 }
