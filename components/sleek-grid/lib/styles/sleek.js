@@ -168,6 +168,7 @@ sleekStyle.replaceSync(`
         cursor: pointer;
         z-index: 1000;
         user-select: none;
+        transition: opacity 0.3s ease-in-out;
     }
     
     .cell:hover:not([sort]) .sort-icon {
@@ -188,6 +189,7 @@ sleekStyle.replaceSync(`
         right: 5px;
         opacity: 0;
         cursor: pointer;
+        transition: opacity 0.3s ease-in-out;
     }
     
     .cell:hover .search-icon {

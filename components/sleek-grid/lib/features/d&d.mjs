@@ -107,7 +107,7 @@ SleekGrid.prototype.dragndrop = function dragndrop() {
                     dropIndex = packRight(dropX);
                 }
                 ghost.style.transform = `translate(${(pageX - initialX)}px, ${(pageY - initialY)}px)`;
-                sleekGrid.replaceGridStyle(sleekGrid);
+                sleekGrid.replaceGridStyle();
             } else {
                 viewPort.querySelectorAll(`.c-${dragIndex}`).forEach(cell => {
                     cell.classList.remove("detached");
@@ -159,9 +159,9 @@ function createGhostColumn(grid, dragIndex, {left, top, right, bottom}) {
     });
     ghost.dispose = function () {
         ghost.style.opacity = null;
-        ghost.addEventListener("transitionend", function () {
+        setTimeout(function () {
             ghost.remove();
-        });
+        }, 300);
     };
     return ghost;
 }

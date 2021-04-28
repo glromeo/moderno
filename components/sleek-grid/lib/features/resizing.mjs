@@ -258,15 +258,18 @@ SleekGrid.prototype.resizing = function resizing() {
         }
     });
 
-    const autosizeHandlers = {
-        "handle width-handle": createAutosizeHandler(columnFitCallback, maxWidth),
-        "handle height-handle": createAutosizeHandler(rowFitCallback, maxHeight)
-    };
+    const autosizeWidth = createAutosizeHandler(columnFitCallback, maxWidth);
+    const autosizeHeight = createAutosizeHandler(rowFitCallback, maxHeight);
 
     viewPort.addEventListener("dblclick", event => {
-        const handler = autosizeHandlers[event.target.className];
-        if (handler) {
-            handler(event);
+        const handle = event.target.closest(".handle");
+        if (handle) {
+            if (handle.classList.contains("height-handle")) {
+                autosizeHeight(event);
+            }
+            if (handle.classList.contains("width-handle")) {
+                autosizeWidth(event);
+            }
         }
     });
 

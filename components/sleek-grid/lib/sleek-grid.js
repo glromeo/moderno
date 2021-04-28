@@ -139,13 +139,12 @@ export class SleekGrid extends HTMLElement {
     }
 
     resize(properties) {
-        const {columns, rows} = properties;
 
         if (properties.hasOwnProperty("columns")) {
             properties.columns = importColumns(properties.columns, autosizeColumns({
                 mode: this.autosize,
                 columns: properties.columns,
-                rows: properties.rows,
+                rows: properties.rows ?? this.rows,
                 viewPort: this.viewPort.getBoundingClientRect()
             }));
 
@@ -161,7 +160,7 @@ export class SleekGrid extends HTMLElement {
         if (properties.hasOwnProperty("rows")) {
             properties.rows = importRows(properties.rows, autosizeRows({
                 mode: this.autosize,
-                columns: properties.columns,
+                columns: properties.columns ?? this.columns,
                 rows: properties.rows,
                 viewPort: this.viewPort.getBoundingClientRect()
             }));
@@ -176,10 +175,9 @@ export class SleekGrid extends HTMLElement {
         }
 
         Object.assign(properties, this.range(properties));
-        this.replaceGridStyle(properties);
     }
 
-    range({columns, rows} = this) {
+    range({columns = this.columns, rows = this.rows} = this) {
         const left = Math.max(0, this.viewPort.scrollLeft - HZ_OVERFLOW);
         const top = Math.max(0, this.viewPort.scrollTop - VT_OVERFLOW);
         const right = Math.min(this.sheetWidth, this.viewPort.scrollLeft + this.viewPort.clientWidth + HZ_OVERFLOW);
@@ -192,7 +190,9 @@ export class SleekGrid extends HTMLElement {
         };
     }
 
-    replaceGridStyle({columns, rows, topIndex, bottomIndex, leftIndex, rightIndex} = this, style = "") {
+    replaceGridStyle(style = "") {
+        const {columns, rows, topIndex, bottomIndex, leftIndex, rightIndex} = this;
+
         for (let columnIndex = leftIndex; columnIndex < rightIndex; ++columnIndex) {
             const {left, width} = columns[columnIndex];
             style += `.c-${columnIndex}{left:${left}px;width:${width}px}\n`;
@@ -213,6 +213,8 @@ export class SleekGrid extends HTMLElement {
         }
 
         Object.assign(this, properties);
+
+        this.replaceGridStyle();
 
         let columnIndex = this.leftIndex;
         let topHeaderCell = this.topHeader.firstChild;
@@ -535,7 +537,7 @@ export class SleekGrid extends HTMLElement {
 
         this.viewPort.classList.add("animate");
 
-        this.replaceGridStyle(this, `
+        this.replaceGridStyle(`
              .cell.c-${leftIndex},
              .cell.c-${leftIndex+1},
              .cell.c-${rightIndex},
