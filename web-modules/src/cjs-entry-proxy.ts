@@ -1,6 +1,6 @@
 import {init as initCjs, parse as parseCjs} from "cjs-module-lexer";
 import {readFileSync} from "fs";
-import { dirname } from "path";
+import {dirname} from "path";
 import {isBare, pathnameToModuleUrl, toPosix} from "./es-import-utils";
 import {EntryProxyResult} from "./web-modules";
 
@@ -39,7 +39,7 @@ export type PluginCjsProxyOptions = {
     entryModules: Set<string>
 }
 
-export function generateCjsProxy(entryId: string):EntryProxyResult {
+export function generateCjsProxy(entryId: string): EntryProxyResult {
     const entryUrl = toPosix(entryId);
     const exports = scanCjs(entryId);
     exports.delete("__esModule");

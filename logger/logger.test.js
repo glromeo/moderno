@@ -33,39 +33,9 @@ describe("@moderno/logger", function () {
         global.Date.prototype.toISOString = toISOString;
     });
 
-    it("simplest form", function () {
+    it("can just log", function () {
         log`hello world`;
-        expect(log.write).to.have.been.calledWith(
-            "blue[1974-04-12] blueBright[08:30:00]cyan[.000] | hello world\n"
-        );
-    });
-
-    it("details", function () {
-        log.details = true;
-        log`${"hello world"}`;
-        expect(log.write).to.have.been.calledWith(
-            "blue[1974-04-12] blueBright[08:30:00]cyan[.000] " +
-            "|underline[unit.test            blueBright[45]:blueBright[12]]| " +
-            "hello world\n"
-        );
-    });
-
-    it("compact", function () {
-        log.compact = true;
-        log`hello world`;
-        expect(log.write).to.have.been.calledWith(
-            "blue[1974-04-12] blueBright[08:30:00]cyan[.000] > hello world\n"
-        );
-    });
-
-    it("details compact", function () {
-        log.details = true;
-        log.compact = true;
-        log`hello world`;
-        expect(log.write).to.have.been.calledWith(
-            "underline[unit.test            blueBright[64]:blueBright[12]]\n" +
-            "             blue[1974-04-12] blueBright[08:30:00]cyan[.000] > hello world\n"
-        );
+        expect(log.write).to.have.been.calledWith("blueBright[08:30:00]cyan[.000] | hello world\n");
     });
 
     it("colors", function () {

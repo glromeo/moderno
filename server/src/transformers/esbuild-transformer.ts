@@ -1,8 +1,7 @@
 import {init, parse} from "es-module-lexer";
-import {startService} from "esbuild";
+import esbuild from "esbuild";
 import {useWebModules} from "@moderno/web-modules";
 import memoized from "nano-memoize";
-import path from "path";
 import {ModernoOptions} from "../configure";
 import {JAVASCRIPT_CONTENT_TYPE} from "../util/mime-types";
 import {TransformerOutput} from "./index";
@@ -11,21 +10,13 @@ export const useEsBuildTransformer = memoized((options: ModernoOptions, sourceMa
 
     const {resolveImport} = useWebModules(options);
 
-    let esbuild;
-    let setup = async () => {
-        await init;
-        return esbuild = await startService();
-    };
-
     async function esbuildTransformer(filename:string, content:string): Promise<TransformerOutput> {
 
-        let {code, map} = await (esbuild || await setup()).transform(content, {
+        let {code, map} = await esbuild.transform(content, {
             sourcefile: filename,
             define: {"process.env.NODE_ENV": `"development"`},
             sourcemap: "inline",
             loader: "tsx"
-        }).catch(reason => {
-            console.error(reason);
         });
 
         if (!code) {
@@ -60,7 +51,7 @@ export const useEsBuildTransformer = memoized((options: ModernoOptions, sourceMa
                 "content-length": Buffer.byteLength(code),
                 "x-transformer": "esbuild-transformer"
             },
-            map,
+            map: JSON.parse(map),
             links: [...links]
         };
     }

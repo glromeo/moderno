@@ -7,6 +7,13 @@ exports.useNotifications = exports.Notification = exports.notifications = void 0
 const events_1 = __importDefault(require("events"));
 exports.notifications = new events_1.default();
 class Notification {
+    static counter = 0;
+    id;
+    timeMs;
+    sticky;
+    type;
+    message;
+    error;
     constructor(message, type = "info", sticky = false, error) {
         this.id = ++Notification.counter;
         this.type = type;
@@ -29,7 +36,6 @@ class Notification {
     }
 }
 exports.Notification = Notification;
-Notification.counter = 0;
 function useNotifications(options) {
     if (options.notify) {
         return (message, type = "info", sticky = false, error) => {

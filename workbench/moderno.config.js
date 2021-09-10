@@ -24,8 +24,8 @@ module.exports = {
         "components/**/*.spec.js",
         "test/*.spec.mjs"
     ],
-
-    plugins: [
-        require("./index.js")
-    ]
+    //
+    // plugins: [
+    //     require("./plugin/index.js")
+    // ]
 };

@@ -2,21 +2,7 @@
 <module type="WEB_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$">
-      <excludeFolder url="file://$MODULE_DIR$/.idea" />
-      <excludeFolder url="file://$MODULE_DIR$/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/components/fa-icon/files" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/ant-design/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/babel-runtime/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/bootstrap/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/iife/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/lit-element/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/lit-html/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/react/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/redux/web_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/web-modules/test/fixture/workspaces/web_modules" />
-    </content>
+    <content url="file://$MODULE_DIR$" />
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

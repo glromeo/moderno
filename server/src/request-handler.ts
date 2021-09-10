@@ -69,7 +69,7 @@ export const useRequestHandler = memoized(<V extends Version>(options: ModernoOp
      */
     router.get("/*", async function workspaceMiddleware(req: Req<V>, res: Res<V>) {
 
-        let url = req.url, isHMR;
+        let url = req.url, isHMR: boolean = false;
         if (url) try {
 
             if (url.endsWith(".HMR")) {

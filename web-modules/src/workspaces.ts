@@ -29,7 +29,5 @@ function readManifest(basedir: string, makeRelative: PathConverter, entries = ne
 }
 
 export function readWorkspaces(rootDir: string): Map<string, string> {
-    const makeRelative = pathname => posix.join("/workspaces", toPosix(path.relative(rootDir, pathname)));
-    let workspaces = readManifest(rootDir, makeRelative)!;
-    return workspaces;
+    return readManifest(rootDir, pathname => posix.join("/workspaces", toPosix(path.relative(rootDir, pathname))))!;
 }

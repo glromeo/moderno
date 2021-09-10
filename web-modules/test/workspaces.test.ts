@@ -45,7 +45,7 @@ describe("workspaces", function () {
 
         let workspaces = readWorkspaces(path.join(__dirname, "fixture"));
 
-        expect([...workspaces]).to.have.members([
+        expect([...workspaces.keys()]).to.have.members([
             "@test/fixture",
             "@fixture/babel-runtime",
             "@fixture/bootstrap",

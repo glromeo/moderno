@@ -1,0 +1,22 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "CLI",
+      "skipFiles": [
+        "<node_internals>/**", 
+        "node_modules/**"
+      ],
+      "runtimeArgs": ["-r", "ts-node/register/transpile-only"],
+      "program": "${workspaceFolder}\\server\\src\\cli.ts",
+      "outFiles": [
+        "${workspaceFolder}/**/*.js"
+      ]
+    }
+  ]
+}

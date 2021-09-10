@@ -1,31 +1,79 @@
-const chalk = require("chalk");
 const util = require("util");
 const {sep} = require("path");
+const quotes = require("./quotes.js");
 
-const colors = {
-    trace: chalk.gray,
-    debug: chalk.blueBright,
-    info: chalk.black,
-    warn: chalk.yellow,
-    error: chalk.red
+const BACKGROUND = {
+    BLACK: "\x1B[40m",	            // Applies non-bold/bright black to background
+    RED: "\x1B[41m",	            // Applies non-bold/bright red to background
+    GREEN: "\x1B[42m",	            // Applies non-bold/bright green to background
+    YELLOW: "\x1B[43m",	            // Applies non-bold/bright yellow to background
+    BLUE: "\x1B[44m",	            // Applies non-bold/bright blue to background
+    MAGENTA: "\x1B[45m",	        // Applies non-bold/bright magenta to background
+    CYAN: "\x1B[46m",	            // Applies non-bold/bright cyan to background
+    WHITE: "\x1B[47m",	            // Applies non-bold/bright white to background
+    EXTENDED: "\x1B[48m",	        // Applies extended color value to the background
+    DEFAULT: "\x1B[49m",	        // Applies only the background portion of the defaults
+    BRIGHT_BLACK: "\x1B[100m",	    // Applies bold/bright black to background
+    BRIGHT_RED: "\x1B[101m",	    // Applies bold/bright red to background
+    BRIGHT_GREEN: "\x1B[102m",	    // Applies bold/bright green to background
+    BRIGHT_YELLOW: "\x1B[103m",	    // Applies bold/bright yellow to background
+    BRIGHT_BLUE: "\x1B[104m",	    // Applies bold/bright blue to background
+    BRIGHT_MAGENTA: "\x1B[105m",	// Applies bold/bright magenta to background
+    BRIGHT_CYAN: "\x1B[106m",	    // Applies bold/bright cyan to background
+    BRIGHT_WHITE: "\x1B[107m",	    // Applies bold/bright white to background
 };
 
-function stringify(o, color) {
+const COLOR = {
+    BLACK: "\x1B[30m",	            // Applies non-bold/bright black to foreground
+    RED: "\x1B[31m",	            // Applies non-bold/bright red to foreground
+    GREEN: "\x1B[32m",	            // Applies non-bold/bright green to foreground
+    YELLOW: "\x1B[33m",	            // Applies non-bold/bright yellow to foreground
+    BLUE: "\x1B[34m",	            // Applies non-bold/bright blue to foreground
+    MAGENTA: "\x1B[35m",	        // Applies non-bold/bright magenta to foreground
+    CYAN: "\x1B[36m",	            // Applies non-bold/bright cyan to foreground
+    WHITE: "\x1B[37m",	            // Applies non-bold/bright white to foreground
+    EXTENDED: "\x1B[38m",	        // Applies extended color value to the foreground
+    DEFAULT: "\x1B[39m",	        // Applies only the foreground portion of the defaults
+    BRIGHT_BLACK: "\x1B[90m",	    // Applies bold/bright black to foreground
+    BRIGHT_RED: "\x1B[91m",	        // Applies bold/bright red to foreground
+    BRIGHT_GREEN: "\x1B[92m",	    // Applies bold/bright green to foreground
+    BRIGHT_YELLOW: "\x1B[93m",	    // Applies bold/bright yellow to foreground
+    BRIGHT_BLUE: "\x1B[94m",	    // Applies bold/bright blue to foreground
+    BRIGHT_MAGENTA: "\x1B[95m",     // Applies bold/bright magenta to foreground
+    BRIGHT_CYAN: "\x1B[96m",	    // Applies bold/bright cyan to foreground
+    BRIGHT_WHITE: "\x1B[97m",	    // Applies bold/bright white to foreground
+};
+
+const colors = {
+    trace: COLOR.BRIGHT_BLACK,
+    debug: COLOR.BLUE,
+    info: COLOR.BLACK,
+    warn: COLOR.YELLOW,
+    error: COLOR.RED
+};
+
+const flags = {
+    trace: BACKGROUND.BRIGHT_BLACK + " " + COLOR.BRIGHT_BLACK + BACKGROUND.DEFAULT + " ",
+    debug: BACKGROUND.BLUE + " " + COLOR.BRIGHT_BLUE + BACKGROUND.DEFAULT + " ",
+    info: COLOR.BRIGHT_WHITE + BACKGROUND.BRIGHT_BLUE + " " + COLOR.DEFAULT + BACKGROUND.DEFAULT + " ",
+    warn: COLOR.BRIGHT_YELLOW + BACKGROUND.YELLOW + "!" + COLOR.YELLOW + BACKGROUND.DEFAULT + " ",
+    error: COLOR.BRIGHT_RED + BACKGROUND.RED + "X" + COLOR.RED + BACKGROUND.DEFAULT + " ",
+};
+
+function stringify(o) {
     const type = typeof o;
     if (type === "object") {
         return util.inspect(o, {colors: true, depth: 3});
     } else if (type === "string") {
-        return color && o.charCodeAt(0) !== 27 && o !== " " ? color(o) : o;
+        return o.charCodeAt(0) !== 27 && o !== " " ? o : COLOR.DEFAULT + o;
     } else {
-        return color && color(String(o)) || String(o);
+        return o;
     }
 }
 
 let write = process.stdout.write.bind(process.stdout);
 
-const DEFAULT_DETAILS_LENGTH = 30;
-
-let detailsLength = DEFAULT_DETAILS_LENGTH;
+let lastDay = -1;
 
 function getStackTrace(error, stack) {
     return stack;
@@ -39,43 +87,25 @@ function callSite(error, depth) {
     return stack[depth];
 }
 
-let compact = process.stdout.columns < 120;
-
-function getDetails() {
-    const cs = callSite(new Error(), 3);
-    const coords = chalk.blueBright(cs.getLineNumber()) + ":" + chalk.blueBright(cs.getColumnNumber());
-    const columns = detailsLength - coords.length + 20;
-    let fileName = cs.getFileName();
-    let to = Math.max(fileName.lastIndexOf("."), 0);
-    let from = fileName.lastIndexOf(sep, to) + 1;
-    fileName = fileName.slice(from, to);
-    if (fileName.length > columns) {
-        fileName = fileName.substring(0, columns - 1) + "~";
-    } else {
-        fileName = fileName.padEnd(columns, " ");
-    }
-    return chalk.underline(fileName + coords);
-}
-
-function writeln(color, head, tail) {
+function writeln(flag, color, head, tail) {
 
     const count = tail.length;
 
-    const iso = new Date().toISOString();
-    const date = chalk.blue(iso.substring(0, 10));
-    const time = chalk.blueBright(iso.substring(11, 19));
-    const msec = chalk.cyan(iso.substring(19, 23));
-    const timestamp = `${date} ${time}${msec}`;
+    const date = new Date();
+    if (date.getDay() > lastDay) {
+        write(COLOR.RED + date.toDateString() + COLOR.DEFAULT + " – " + quotes[Math.floor(Math.random() * quotes.length)] + "\n");
+        lastDay = date.getDay();
+    }
 
-    const details = detailsLength && getDetails();
+    const time = date.toLocaleTimeString();
+    const msec = String(date.getMilliseconds()).padStart(3, "0");
+    const timestamp = `${COLOR.BRIGHT_BLACK + time + COLOR.BRIGHT_BLACK}.${msec} ${flag}`;
 
-    let line = compact
-        ? details
-            ? `${details}\n${timestamp.padStart(detailsLength + 30, " ")} > `
-            : timestamp + " > "
-        : details
-            ? `${timestamp} |${details}| `
-            : timestamp + " | ";
+    const cs = callSite(new Error(), 2);
+    const fileName = cs.getFileName();
+    const suffix = COLOR.BRIGHT_BLACK + fileName.substring(fileName.lastIndexOf(sep) + 1) + COLOR.BLACK + ":" + COLOR.BRIGHT_BLUE + cs.getLineNumber() + COLOR.DEFAULT;
+
+    let line = timestamp;
 
     if (Array.isArray(head) && count === (head.length - 1)) {
         for (let i = 0; i < count; i++) {
@@ -94,11 +124,11 @@ function writeln(color, head, tail) {
         }
     }
 
-    write(line + "\n");
+    write(line + `\x1B[${process.stdout.columns - suffix.length + 21}G${suffix}\n`);
 }
 
 function log(strings, ...keys) {
-    writeln(null, strings, keys);
+    writeln(flags.info, colors.info, strings, keys);
 }
 
 module.exports = log;
@@ -118,31 +148,31 @@ Object.assign(module.exports, {
 
     trace(strings, ...keys) {
         if (threshold >= 4) {
-            writeln(colors.trace, strings, keys);
+            writeln(flags.trace, colors.trace, strings, keys);
         }
     },
 
     debug(strings, ...keys) {
         if (threshold >= 3) {
-            writeln(colors.debug, strings, keys);
+            writeln(flags.debug, colors.debug, strings, keys);
         }
     },
 
     info(strings, ...keys) {
         if (threshold >= 2) {
-            writeln(undefined, strings, keys);
+            writeln(flags.info, colors.info, strings, keys);
         }
     },
 
     warn(strings, ...keys) {
         if (threshold >= 1) {
-            writeln(colors.warn, strings, keys);
+            writeln(flags.warn, colors.warn, strings, keys);
         }
     },
 
     error(strings, ...keys) {
         if (threshold >= 0) {
-            writeln(colors.error, strings, keys);
+            writeln(flags.error, colors.error, strings, keys);
         }
     },
 
@@ -174,26 +204,6 @@ Object.defineProperty(module.exports, "write", {
     enumerable: true,
     get: () => write,
     set: fn => write = fn
-});
-
-Object.defineProperty(module.exports, "details", {
-    enumerable: true,
-    get: () => detailsLength,
-    set: length => {
-        if (length === true) {
-            detailsLength = DEFAULT_DETAILS_LENGTH;
-        } else if (length === false) {
-            detailsLength = 0;
-        } else {
-            detailsLength = Number(length);
-        }
-    }
-});
-
-Object.defineProperty(module.exports, "compact", {
-    enumerable: true,
-    get: () => compact,
-    set: value => compact = value
 });
 
 Object.defineProperty(module.exports, "level", {
