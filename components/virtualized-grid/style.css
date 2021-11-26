@@ -1,0 +1,300 @@
+:host {
+    --padding: 8px;
+    --stub-width: 0;
+    --stub-height: 0;
+    display: contents;
+    color: var(--text-color)
+}
+
+:host(.busy) {
+    cursor: progress !important;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+#view-port {
+    background-color: var(--background-color);
+}
+
+#stub {
+    position: sticky;
+    float: left;
+    z-index: 30;
+    left: 0;
+    top: 0;
+    width: var(--stub-width);
+    height: var(--stub-height);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 1px 1px 3px var(--shadow-color);
+}
+
+#stub .overflow {
+    position: fixed;
+    background-color: var(--background-color);
+}
+
+#stub .overflow.right {
+    top: 0;
+    left: var(--stub-width);
+    width: 3px;
+    height: var(--stub-height);
+    box-shadow: 1px -3px 3px var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+#stub .overflow.bottom {
+    top: var(--stub-height);
+    left: 0;
+    height: 3px;
+    width: var(--stub-width);
+    box-shadow: -3px 1px 3px var(--background-color);
+    border-right: 1px solid var(--border-color);
+}
+
+#sticky-rows {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: var(--stub-height);
+    z-index: 10;
+    box-shadow: 1px 0 3px var(--shadow-color);
+    margin-left: var(--stub-width);
+}
+
+#sticky-rows .cell {
+    height: 100%;
+}
+
+#sticky-columns {
+    position: sticky;
+    left: 0;
+    width: var(--stub-width);
+    height: 100%;
+    z-index: 10;
+    box-shadow: 0 1px 3px var(--shadow-color);
+}
+
+#sticky-columns .cell {
+    text-align: center;
+    width: 100%;
+    flex-direction: column;
+}
+
+#sheet {
+    position: absolute;
+    top: var(--stub-height);
+    left: var(--stub-width);
+}
+
+.cell {
+    position: absolute;
+    -webkit-user-select: none;
+    user-select: none;
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.cell .text {
+    position: relative;
+    -webkit-user-select: text;
+    user-select: text;
+    height: 100%;
+    padding: var(--padding);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cell > .content {
+    position: relative;
+    height: 100%;
+}
+
+input.heading {
+    position: absolute;
+    width: 100%;
+    padding: calc(var(--padding) * 1.66) var(--padding) 0 var(--padding);
+    border: none;
+    outline: none;
+    cursor: text;
+}
+
+input.heading::-webkit-input-placeholder {
+    transition: color 300ms ease;
+}
+
+input.heading:not(:focus)::-webkit-input-placeholder {
+    color: transparent;
+}
+
+hr.heading {
+    position: absolute;
+    width: 100%;
+    left: 0;
+    bottom: 0;
+    margin: -2px 0;
+    height: 2px;
+    border-bottom: 1px var(--primary-color);
+    background: var(--primary-color);
+    will-change: transform, visibility;
+    transition: all 200ms ease-out;
+    transform: scaleX(0);
+    visibility: hidden;
+    z-index: 1000;
+}
+
+input.heading:focus ~ hr.heading {
+    transform: scaleX(1);
+    visibility: visible;
+}
+
+label.heading {
+    position: absolute;
+    padding: 8px;
+    transform-origin: 0 -150%;
+    transition: transform 300ms ease;
+    user-select: text;
+}
+
+input.heading:focus ~ label.heading,
+input.heading:valid ~ label.heading {
+    color: var(--primary-color);
+    transform: scale(0.75);
+    top: 7px;
+    left: 7px;
+    padding: 0;
+}
+
+input.heading:focus ~ label.heading .sort,
+input.heading:valid ~ label.heading .sort {
+    display: none;
+}
+
+.cell input.heading:focus ~ .search,
+.cell input.heading:valid ~ .search {
+    opacity: 1;
+}
+
+.cell .sort {
+    position: absolute;
+    margin-top: -2px;
+    margin-left: 3px;
+    opacity: 0;
+    height: 60%;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.cell:hover:not([sort]) .sort {
+    opacity: .25;
+}
+
+.cell[sort=desc] .sort {
+    transform: scaleY(-1);
+}
+
+.cell[sort] .sort {
+    opacity: 1;
+}
+
+.cell .search {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    opacity: 0;
+    height: 60%;
+    cursor: pointer;
+}
+
+.cell:hover:not([search]) .search {
+    opacity: .25;
+}
+
+.cell[search] .search {
+    opacity: 1;
+}
+
+.header {
+    background: var(--background-color);
+}
+
+.header .cell :hover,
+.header .cell .active {
+    color: var(--border-color-active);
+}
+
+.row {
+    display: contents;
+}
+
+.row.even .cell {
+    background-color: var(--even-rows-background);
+}
+
+.row.odd .cell {
+    background-color: var(--odd-rows-background);
+}
+
+.handle {
+    float: right;
+    background-color: var(--border-color);
+    z-index: 100;
+    position: relative;
+}
+
+.handle:hover,
+.handle.active {
+    background-color: var(--border-color-active);
+}
+
+.handle::after {
+    content: "";
+    position: absolute;
+    background-color: transparent;
+    z-index: 200;
+}
+
+.handle[column] {
+    left: 1px;
+    width: 1px;
+    margin-left: 2px;
+}
+
+.handle[column]:hover,
+.handle[column].active {
+    left: 2px;
+    width: 3px;
+    margin-left: 0;
+}
+
+.handle[column]::after {
+    width: 9px;
+    top: 0;
+    bottom: 0;
+    margin-left: -4px;
+    cursor: ew-resize;
+}
+
+.handle[row] {
+    left: 0;
+    top: 0;
+    height: 1px;
+}
+
+.handle[row]:hover,
+.handle[row].active {
+    height: 3px;
+    top: -1px;
+}
+
+.handle[row]::after {
+    height: 9px;
+    left: 0;
+    right: 0;
+    margin-top: -4px;
+    cursor: ns-resize;
+}
+
