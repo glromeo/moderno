@@ -1,6 +1,5 @@
 import log from "@moderno/logger";
 import chalk from "chalk";
-import {Service, startService} from "esbuild";
 import {parse} from "fast-url-parser";
 import {existsSync, mkdirSync, promises as fsp, rmdirSync} from "fs";
 import memoized from "nano-memoize";
@@ -12,9 +11,10 @@ import {isBare, parseModuleUrl, pathnameToModuleUrl, toPosix} from "./es-import-
 import {generateEsmProxy, parseEsmReady} from "./esm-entry-proxy";
 import {ImportResolver, WebModulesFactory, WebModulesOptions} from "./index";
 import {useNotifications} from "./notifications";
-import {replaceRequire} from "./replace-require";
 import {closestManifest, readImportMap, stripExt, writeImportMap} from "./utility";
 import {readWorkspaces} from "./workspaces";
+import * as esbuild from "esbuild";
+import {replaceRequire} from "./replace-require";
 
 export type EntryProxyResult = {
     code: string         // The entry proxy code
@@ -180,13 +180,10 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
         return pendingTask;
     }
 
-    let esbuild: Service;
-
     let ready = Promise.all([
-        startService(),
         parseCjsReady,
         parseEsmReady
-    ]).then(([service]) => esbuild = service);
+    ]);
 
     let resolveEntryFile = function (source: string) {
         try {
@@ -247,14 +244,14 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
 
             if (pathname) {
 
-                await (esbuild || await ready).build({
+                await esbuild.build({
                     ...options.esbuild,
                     entryPoints: [entryUrl],
                     outfile: outFile,
                     plugins: [{
                         name: "web_modules",
                         setup(build) {
-                            build.onResolve({filter: /./}, async ({path: url, importer}) => {
+                            build.onResolve({filter: /./}, async ({path: url, importer, kind}) => {
                                 if (isBare(url)) {
                                     if (url === entryUrl) {
                                         return {path: entryFile};
@@ -295,13 +292,14 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
                 let entryProxy = isESM ? generateEsmProxy(entryFile) : generateCjsProxy(entryFile);
                 let imported = new Set<string>(entryProxy.imports);
                 let external = new Set<string>(entryProxy.external);
+                let required = new Map<string, string>();
 
-                // NOTE: externals are disabled at the moment
+                // NOTE: externals are not handled at the moment hence the warning
                 if (external.size) {
                     log.warn(`${source} has ${external.size} externals: ${external.size < 20 ? entryProxy.external : "..."}`);
                 }
 
-                await (esbuild || await ready).build({
+                await esbuild.build({
                     ...options.esbuild,
                     stdin: {
                         contents: entryProxy.code,
@@ -313,7 +311,10 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
                     plugins: [{
                         name: "web_modules",
                         setup(build) {
-                            build.onResolve({filter: /./}, async ({path: url, importer}) => {
+                            build.onResolve({filter: /./}, async function ({path: url, importer, kind}) {
+                                if (kind === "require-call") {
+
+                                }
                                 if (isBare(url)) {
                                     if (imported.has(url)) {
                                         let webModuleUrl = importMap.imports[url];
@@ -333,14 +334,14 @@ export const useWebModules = memoized<WebModulesFactory>((options: WebModulesOpt
                                     }
                                     return null;
                                 }
-                                if (external.has(url) && false) {
-                                    let bareUrl = resolveToBareUrl(importer, url);
-                                    return {
-                                        path: `/web_modules/${bareUrl}`,
-                                        external: true,
-                                        namespace: "web_modules"
-                                    };
-                                }
+                                // if (external.has(url)) {
+                                //     let bareUrl = resolveToBareUrl(importer, url);
+                                //     return {
+                                //         path: `/web_modules/${bareUrl}`,
+                                //         external: true,
+                                //         namespace: "web_modules"
+                                //     };
+                                // }
                                 return null;
                             });
                         }

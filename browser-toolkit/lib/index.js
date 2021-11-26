@@ -26,7 +26,7 @@ var queue = [];
 var callbacks = new MultiMap();
 var ws = new WebSocket(`${location.protocol === "http:" ? "ws:" : "wss:"}//${location.host}/`, "esnext-dev");
 ws.onopen = (event) => {
-  send("hello", {time: new Date().toUTCString()});
+  send("hello", { time: new Date().toUTCString() });
   const subset = callbacks.get("open");
   if (subset)
     for (const callback of subset) {
@@ -37,7 +37,7 @@ ws.onopen = (event) => {
 };
 ws.onmessage = (event) => {
   const message = event.data;
-  const {type, data = void 0} = message[0] === "{" ? JSON.parse(message) : {type: message};
+  const { type, data = void 0 } = message[0] === "{" ? JSON.parse(message) : { type: message };
   const subset = callbacks.get(type);
   if (subset)
     for (const callback of subset) {
@@ -58,7 +58,7 @@ ws.onclose = (event) => {
     }
 };
 function send(type, data) {
-  const text = data === void 0 ? JSON.stringify({type}) : JSON.stringify({type, data});
+  const text = data === void 0 ? JSON.stringify({ type }) : JSON.stringify({ type, data });
   if (ws.readyState !== ws.OPEN) {
     queue.push(text);
   } else {
@@ -178,11 +178,12 @@ sheet.replaceSync(`
 
 `);
 customElements.define("esnext-notifications", class extends HTMLElement {
+  renderRoot;
+  hideTimeout = 0;
+  ready = Promise.resolve();
   constructor() {
     super();
-    this.hideTimeout = 0;
-    this.ready = Promise.resolve();
-    this.renderRoot = this.attachShadow({mode: "open"});
+    this.renderRoot = this.attachShadow({ mode: "open" });
     this.renderRoot["adoptedStyleSheets"] = [sheet];
     this.renderRoot.innerHTML = `<div id="container">${this.innerHTML}</div>`;
     let autoHide;
@@ -233,7 +234,7 @@ customElements.define("esnext-notifications", class extends HTMLElement {
       this.containerElement.classList.remove("visible");
     }, timeoutMs);
   }
-  add({id, type = "default", message = ""}, sticky = false) {
+  add({ id, type = "default", message = "" }, sticky = false) {
     this.ready = (async (ready) => {
       await ready;
       let slot = document.createElement("div");
@@ -272,7 +273,7 @@ customElements.define("esnext-notifications", class extends HTMLElement {
       }));
     })(this.ready);
   }
-  update({id, type = "default", message = ""}) {
+  update({ id, type = "default", message = "" }) {
     this.ready = (async (ready) => {
       await ready;
       const slot = this.renderRoot.getElementById(id);
@@ -297,7 +298,7 @@ var acceptCallbacks = new Map();
 var disposeCallbacks = new Map();
 var DO_NOTHING = () => void 0;
 function createHotContext(url) {
-  let {pathname, search} = new URL(url);
+  let { pathname, search } = new URL(url);
   let id = pathname + search.slice(0, search.endsWith(".HMR") ? search.lastIndexOf("v=") - 1 : search.length);
   return {
     accept(cb = true) {
@@ -313,7 +314,7 @@ function createHotContext(url) {
   };
 }
 var updateCount = 0;
-on("hmr:update", ({url}) => {
+on("hmr:update", ({ url }) => {
   console.log("[HMR] update", url);
   const disposeCallback = disposeCallbacks.get(url);
   let recycled;
@@ -325,7 +326,7 @@ on("hmr:update", ({url}) => {
     const acceptCallback = acceptCallbacks.get(url);
     if (acceptCallback) {
       try {
-        acceptCallback({module, recycled});
+        acceptCallback({ module, recycled });
         console.log("[HMR] accepted version:", updateCount + ".HMR");
         return;
       } catch (error) {
@@ -336,7 +337,7 @@ on("hmr:update", ({url}) => {
     location.reload();
   });
 });
-on("hmr:reload", ({url}) => {
+on("hmr:reload", ({ url }) => {
   console.log("[HMR] reload", url);
   location.reload();
 });

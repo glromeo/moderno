@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import log from "@moderno/logger";
 import yargs from "yargs";
-import {configure} from "./configure";
+import {Args, configure} from "./configure";
 import {startServer} from "./server";
 
 require('source-map-support').install();
@@ -49,9 +49,7 @@ const args = yargs
     })
     .help()
     .alias("help", "h")
-    .argv;
-
-process.env.NODE_ENV = args.production ? "production" : "development";
+    .argv as Args;
 
 const SHUTDOWN_TIMEOUT = 120000;
 const TERMINATED_BY_CTRL_C = 130;
@@ -67,14 +65,14 @@ startServer(configure(args)).then(runtime => {
         log.error("Uncaught Exception thrown", err);
     });
 
-    // process.on("SIGINT", async () => {
-    //     log.info("ctrl+c detected...");
-    //     await new Promise(done => {
-    //         runtime.shutdown().then(done);
-    //         setTimeout(done, SHUTDOWN_TIMEOUT);
-    //     });
-    //     process.exit(TERMINATED_BY_CTRL_C);
-    // });
+    process.on("SIGINT", async () => {
+        log.info("ctrl+c detected...");
+        await new Promise(done => {
+            runtime.shutdown().then(done);
+            setTimeout(done, SHUTDOWN_TIMEOUT);
+        });
+        process.exit(TERMINATED_BY_CTRL_C);
+    });
 
     process.on("exit", () => {
         log.info("done");

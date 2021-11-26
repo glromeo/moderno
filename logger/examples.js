@@ -1,21 +1,25 @@
 const log = require("./index.js");
 
-log.level = log.TRACE; // ...or just "trace"
+setTimeout(function () {
 
-log.details = true;
+    log.level = log.TRACE; // ...or just "trace"
 
-log.trace("Hello world!");
-log.debug("Hello world!");
-log.info("Hello world!");
-log.warn("Hello world!");
-log.error("Hello world!");
+    log.details = true;
 
-const {trace, debug, info, warn, error, setLevel} = log;
+    log.trace("Hello world!");
+    log.debug("Hello world!");
+    log.info("Hello world!");
+    log.warn("Hello world!");
+    log.error("Hello world!");
 
-setLevel("trace");
+    const {trace, debug, info, warn, error, setLevel} = log;
 
-trace`Hello world!`
-debug`Hello world!`
-info`Hello world!`
-warn`Hello world!`
-error`Hello world!`
+    setLevel("trace");
+
+    trace`Hello world!`;
+    debug`Hello world!`;
+    info`Hello world!`;
+    warn`Hello world!`;
+    error`Hello world!`;
+
+}, 250);

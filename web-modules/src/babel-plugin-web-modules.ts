@@ -12,7 +12,7 @@ export const useWebModulesPlugin = memoized(config => {
         if (importUrl.startsWith("@babel/")) return `/web_modules/${importUrl}.js`;
     }
 
-    function rewriteImports({types}):any {
+    function rewriteImports({types}): any {
 
         let filename, imports, importMap;
 
@@ -72,7 +72,7 @@ export const useWebModulesPlugin = memoized(config => {
         const importMap = new Map();
 
         traverse(parsedAst, {
-            "CallExpression"(path:any, state) {
+            "CallExpression"(path: any, state) {
                 const isImport = path.node.callee.type === "Import";
                 const isRequire = path.node.callee.name === "require";
                 if (isImport || isRequire) {

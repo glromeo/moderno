@@ -10,14 +10,14 @@ function scanEsm(
     filename: string,
     collected = new Set<string>(),
     imports = new Map<string, string[]>(),
-    external:string[] = []
+    external: string[] = []
 ): { exports: Map<string, string[]>, external: string[] } {
 
     function notYetCollected(e) {
         return !collected.has(e) && collected.add(e);
     }
 
-    function scanEsm(filename:string, module:string|null) {
+    function scanEsm(filename: string, module: string | null) {
 
         let source = readFileSync(filename, "utf-8");
         let [

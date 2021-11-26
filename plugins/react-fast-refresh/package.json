@@ -7,11 +7,11 @@
   "repository": "https://github.com/glromeo/moderno.git",
   "author": "Gianluca Romeo <glromeo@gmail.com>",
   "dependencies": {
-    "@babel/core": "^7.13.8",
+    "@babel/core": "^7.14.8",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
-    "@babel/types": "^7.12.17",
+    "@babel/types": "^7.14.9",
     "@moderno/browser-toolkit": "^1.0.1",
-    "react-refresh": "^0.9.0"
+    "react-refresh": "^0.10.0"
   },
   "scripts": {
     "build": "esbuild react-refresh/runtime --define:process.env.NODE_ENV=\\\"development\\\" --outdir=lib --bundle --format=esm"

@@ -51,9 +51,7 @@ function readManifest(basedir, makeRelative, entries = new Map()) {
     }
 }
 function readWorkspaces(rootDir) {
-    const makeRelative = pathname => path_1.posix.join("/workspaces", es_import_utils_1.toPosix(path_1.default.relative(rootDir, pathname)));
-    let workspaces = readManifest(rootDir, makeRelative);
-    return workspaces;
+    return readManifest(rootDir, pathname => path_1.posix.join("/workspaces", es_import_utils_1.toPosix(path_1.default.relative(rootDir, pathname))));
 }
 exports.readWorkspaces = readWorkspaces;
 //# sourceMappingURL=workspaces.js.map

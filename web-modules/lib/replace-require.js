@@ -33,7 +33,7 @@ async function shiftSourceMap(filename, offset, sourcemap) {
 async function replaceRequire(filename, resolveImport, sourcemap) {
     let code = await readFile(filename, "utf-8");
     let requires = new Set();
-    let re = /require\s*\(([^)]+)\)/g;
+    let re = /__require\s*\(([^)]+)\)/g;
     for (let match = re.exec(code); match; match = re.exec(code)) {
         let required = match[1].trim().slice(1, -1);
         requires.add(index_1.isBare(required) ? await resolveImport(required, filename) : required);

@@ -126,31 +126,37 @@ describe("web modules (esbuild)", function () {
         ]);
 
         await SourceMapConsumer.with(readSourceMap(`fixture/react/web_modules/react.js.map`), null, consumer => {
-            expect(
-                consumer.originalPositionFor({line: 48, column: 26})
-            ).to.eql({
-                source: "../../node_modules/react/cjs/react.development.js",
-                line: 19,
-                column: 19,
-                name: null
-            });
+            // var _assign = require('object-assign');
+            // ----------------------^ (16:22) NOTE: sourcemap columns start at 0 not 1 !!!
             expect(
                 consumer.generatedPositionFor({
                     source: "../../node_modules/react/cjs/react.development.js",
                     line: 16,
-                    column: 27
+                    column: 22
                 })
             ).to.eql({
-                line: 47, column: 20, lastColumn: null
+                line: 41, column: 32, lastColumn: null
             });
+            //   var maybeIterator = MAYBE_ITERATOR_SYMBOL && maybeIterable[MAYBE_ITERATOR_SYMBOL] || ...
+            // -----------------------------------------------^ (78:48)
             expect(
                 consumer.generatedPositionFor({
                     source: "../../node_modules/react/cjs/react.development.js",
                     line: 78,
-                    column: 48
+                    column: 47
                 })
             ).to.eql({
-                line: 98, column: 53, lastColumn: 66
+                line: 92, column: 55, lastColumn: 68
+            });
+            //         var REACT_LAZY_TYPE = 60116;
+            // ------------------------------^ (48:30)
+            expect(
+                consumer.originalPositionFor({line: 48, column: 30})
+            ).to.eql({
+                source: "../../node_modules/react/cjs/react.development.js",
+                line: 31,
+                column: 4,
+                name: null
             });
         });
     });
@@ -433,23 +439,29 @@ describe("web modules (esbuild)", function () {
                 "../../node_modules/lit-html/src/lit-html.ts"
             ]);
 
+            // const directives = new WeakMap<object, true>();
+            // -----------------------^ (17:23)
+
             expect(
-                consumer.originalPositionFor({line: 15, column: 0})
+                consumer.originalPositionFor({line: 2, column: 21})
             ).to.eql({
                 source: "../../node_modules/lit-html/src/lib/directive.ts",
                 line: 17,
-                column: 0,
+                column: 23,
                 name: null
             });
+
+            //   (window['litHtmlVersions'] || (window['litHtmlVersions'] = [])).push('1.3.0');
+            // ---^ (59:3)
 
             expect(
                 consumer.generatedPositionFor({
                     source: "../../node_modules/lit-html/src/lit-html.ts",
                     line: 59,
-                    column: 4
+                    column: 3
                 })
             ).to.eql({
-                line: 795, column: 2, lastColumn: 9
+                line: 652, column: 2, lastColumn: 9
             });
         });
 
@@ -460,7 +472,7 @@ describe("web modules (esbuild)", function () {
         expect(
             readTextFile(`fixture/lit-html/web_modules/lit-html/directives/repeat.js`)
         ).to.have.string(
-            `import {createMarker, directive, NodePart, removeNodes, reparentNodes} from "/web_modules/lit-html.js";`
+            `import { createMarker, directive, NodePart, removeNodes, reparentNodes } from "/web_modules/lit-html.js";`
         );
     });
 
@@ -553,17 +565,17 @@ describe("web modules (esbuild)", function () {
 
         let exports = readExports(`fixture/lit-element/web_modules/lit-element.js`);
         expect(exports).to.have.members([
-            "SVGTemplateResult",
-            "TemplateResult",
-            "html",
-            "svg",
             "CSSResult",
             "LitElement",
+            "ReactiveElement",
+            "SVGTemplateResult",
+            "TemplateResult",
             "UpdatingElement",
             "css",
             "customElement",
             "defaultConverter",
             "eventOptions",
+            "html",
             "internalProperty",
             "notEqual",
             "property",
@@ -571,7 +583,9 @@ describe("web modules (esbuild)", function () {
             "queryAll",
             "queryAssignedNodes",
             "queryAsync",
+            "state",
             "supportsAdoptingStyleSheets",
+            "svg",
             "unsafeCSS"
         ]);
 
@@ -590,8 +604,8 @@ describe("web modules (esbuild)", function () {
         expect(
             readTextFile(`fixture/lit-element/web_modules/lit-element.js`)
         ).to.have.string(
-            "// test/fixture/node_modules/lit-element/lit-element.js\n" +
-            "import {render} from \"/web_modules/lit-html/lib/shady-render.js\";"
+            `// test/fixture/node_modules/lit-element/lit-element.js\n` +
+            `import { render } from "/web_modules/lit-html/lib/shady-render.js";`
         );
     });
 
@@ -610,6 +624,7 @@ describe("web modules (esbuild)", function () {
             "Dropdown",
             "Modal",
             "Popover",
+            "Offcanvas",
             "Scrollspy",
             "Tab",
             "Toast",
