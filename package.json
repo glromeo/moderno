@@ -20,7 +20,7 @@
   "dependencies": {
     "add-matchers": "^0.6.2",
     "babel-plugin-istanbul": "^6.0.0",
-    "bootstrap": "^5.0.2",
+    "bootstrap": "^4.5.3",
     "chokidar": "^3.5.2",
     "debounce": "^1.2.1",
     "fast-diff": "^1.2.0",

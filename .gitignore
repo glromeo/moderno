@@ -116,3 +116,4 @@ dist
 .pnp.*
 /.idea/
 /components/fa-icon/files/
+**/lib
